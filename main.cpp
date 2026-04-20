@@ -24,7 +24,7 @@ const int SCREEN_END_Y_PADDING = SCREEN_END_Y_PADDING_default;
 int main() {
     const float a = 1.0f;
     const float b = 1.0f;
-    const float θ = M_PI/4.0f;
+    const float θ = M_PI/3.0f;
 
     // const int NX = 100;
     // const int NY = 100;

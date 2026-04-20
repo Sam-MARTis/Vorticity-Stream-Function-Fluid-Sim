@@ -16,6 +16,7 @@ sf::Color interpolate_colour(const sf::Color low, const sf::Color high, const fl
                      lerp_channel(low.a, high.a));
 }
 
+
 void render_scalar_field(const float* x,
                          const float* values,
                          const int nx,
@@ -27,7 +28,7 @@ void render_scalar_field(const float* x,
                          const sf::Color high_colour,
                          sf::RenderWindow& window) {
     const int count = nx * ny;
-    if(count <= 0) {
+    if(count <= 0 || nx < 2 || ny < 2) {
         return;
     }
 
@@ -39,16 +40,39 @@ void render_scalar_field(const float* x,
     }
 
     const float range = std::max(max_val - min_val, 1e-12f);
-    const sf::Vector2f cell_size(std::max(1.0f, scaling[0] * 0.9f), std::max(1.0f, scaling[1] * 0.9f));
+    sf::VertexArray cells(sf::PrimitiveType::Triangles);
 
-    sf::RectangleShape cell(cell_size);
-    for(int idx = 0; idx < count; idx++) {
-        const float normalized = (values[idx] - min_val) / range;
-        cell.setFillColor(interpolate_colour(low_colour, high_colour, normalized));
-        cell.setPosition(sf::Vector2f(render_center[0] + (x[2 * idx] - centroid[0]) * scaling[0],
-                                      render_center[1] - (x[2 * idx + 1] - centroid[1]) * scaling[1]));
-        window.draw(cell);
+    for(int j = 0; j < ny - 1; j++) {
+        for(int i = 0; i < nx - 1; i++) {
+            const int idx_bl = j * nx + i;
+            const int idx_br = j * nx + (i + 1);
+            const int idx_tl = (j + 1) * nx + i;
+            const int idx_tr = (j + 1) * nx + (i + 1);
+
+            const float cell_value = 0.25f * (values[idx_bl] + values[idx_br] + values[idx_tl] + values[idx_tr]);
+            const float normalized = (cell_value - min_val) / range;
+            const sf::Color colour = interpolate_colour(low_colour, high_colour, normalized);
+
+            auto to_screen = [&](const int idx) {
+                return sf::Vector2f(render_center[0] + (x[2 * idx] - centroid[0]) * scaling[0],
+                                    render_center[1] - (x[2 * idx + 1] - centroid[1]) * scaling[1]);
+            };
+
+            const sf::Vector2f p_bl = to_screen(idx_bl);
+            const sf::Vector2f p_br = to_screen(idx_br);
+            const sf::Vector2f p_tl = to_screen(idx_tl);
+            const sf::Vector2f p_tr = to_screen(idx_tr);
+
+            cells.append(sf::Vertex(p_bl, colour));
+            cells.append(sf::Vertex(p_br, colour));
+            cells.append(sf::Vertex(p_tr, colour));
+            cells.append(sf::Vertex(p_bl, colour));
+            cells.append(sf::Vertex(p_tr, colour));
+            cells.append(sf::Vertex(p_tl, colour));
+        }
     }
+
+    window.draw(cells);
 }
 
 void render_velocities(const float* x,
