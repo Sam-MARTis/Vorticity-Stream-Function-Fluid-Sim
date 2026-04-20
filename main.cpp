@@ -78,7 +78,6 @@ int main() {
     float selected_u_y = 0.0f;
     float selected_omega = 0.0f;
     float physics_centroid[2] = {0.0f, 0.0f};
-    int streamline_history_length = 1200;
     int streamline_count = 100;
     float streamline_dt = dt * 100.0f;
     float streamline_max_time_exponent = 0.0f;
@@ -86,7 +85,24 @@ int main() {
     bool use_uniform_streamline_seeds = false;
     unsigned int streamline_seed = 1337u;
     std::vector<std::vector<sf::Vector2f>> cached_streamlines;
+    std::vector<sf::Vector2f> clicked_streamline;
+    bool has_clicked_streamline = false;
     sf::Clock deltaClock;
+
+    auto build_streamline_path = [&](const float start_x, const float start_y) {
+        const float safe_streamline_dt = std::max(1e-6f, streamline_dt);
+        const int history_length = std::max(2, static_cast<int>(std::floor(streamline_max_time / safe_streamline_dt)));
+
+        std::vector<float> pos_history(static_cast<std::size_t>(history_length) * 2u);
+        obtain_streamline_path(x, u, u0, NX, NY, start_x, start_y, pos_history.data(), history_length, safe_streamline_dt, dims);
+
+        std::vector<sf::Vector2f> positions(static_cast<std::size_t>(history_length));
+        for(int i = 0; i < history_length; i++) {
+            positions[static_cast<std::size_t>(i)] = {pos_history[2 * i], pos_history[2 * i + 1]};
+        }
+
+        return positions;
+    };
 
 
 
@@ -112,6 +128,8 @@ int main() {
                         selected_world_y = world_y;
                         find_velocity_at_point(selected_u_x, selected_u_y, selected_world_x, selected_world_y, u, u0, NX, NY, dims);
                         find_vorticity_at_point(selected_omega, selected_world_x, selected_world_y, ω, NX, NY, dims);
+                        clicked_streamline = build_streamline_path(selected_world_x, selected_world_y);
+                        has_clicked_streamline = true;
                     } else {
                         has_selected_point = false;
                     }
@@ -251,12 +269,8 @@ int main() {
 
         if(update_streamline_pressed) {
             streamline_seed += 1u;
-            std::mt19937 rng(streamline_seed);
-            std::uniform_real_distribution<float> unit_dist(0.0f, 1.0f);
             cached_streamlines.clear();
             cached_streamlines.reserve(streamline_count);
-            const float safe_streamline_dt = std::max(1e-6f, streamline_dt);
-            const int history_length = std::max(2, static_cast<int>(std::floor(streamline_max_time / safe_streamline_dt)));
 
             const int grid_cols = std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(streamline_count)))));
             const int grid_rows = std::max(1, static_cast<int>(std::floor(std::sqrt(static_cast<float>(streamline_count)))));
@@ -283,21 +297,17 @@ int main() {
 
                 const float start_x = a * xi + b * eta * std::cos(θ);
                 const float start_y = b * eta * std::sin(θ);
-
-                std::vector<float> pos_history(static_cast<std::size_t>(history_length) * 2u);
-                obtain_streamline_path(x, u, u0, NX, NY, start_x, start_y, pos_history.data(), history_length, safe_streamline_dt, dims);
-
-                std::vector<sf::Vector2f> positions(static_cast<std::size_t>(history_length));
-                for(int i = 0; i < history_length; i++) {
-                    positions[static_cast<std::size_t>(i)] = {pos_history[2 * i], pos_history[2 * i + 1]};
-                }
-
-                cached_streamlines[static_cast<std::size_t>(streamline_idx)] = std::move(positions);
+                cached_streamlines[static_cast<std::size_t>(streamline_idx)] = build_streamline_path(start_x, start_y);
             }
         }
 
         for(const auto& streamline_positions : cached_streamlines) {
             render_streamline_path(streamline_positions, physics_centroid, render_center, scaling, window, sf::Color::Cyan);
+        }
+
+        if(has_clicked_streamline) {
+            const sf::Color orange_colour(255, 165, 0);
+            render_streamline_path(clicked_streamline, physics_centroid, render_center, scaling, window, orange_colour);
         }
 
         ImGui::SFML::Render(window);
