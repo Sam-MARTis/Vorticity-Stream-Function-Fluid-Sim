@@ -1,5 +1,7 @@
 #include<iostream>
 #include<cmath>
+#include<vector>
+#include<random>
 #include<SFML/Graphics.hpp>
 #include "aux.hpp"
 #include "constants.hpp"
@@ -24,7 +26,7 @@ const int SCREEN_END_Y_PADDING = SCREEN_END_Y_PADDING_default;
 int main() {
     const float a = 1.0f;
     const float b = 1.0f;
-    const float θ = M_PI/3.0f;
+    const float θ = M_PI/2.0f;
 
     // const int NX = 100;
     // const int NY = 100;
@@ -76,6 +78,11 @@ int main() {
     float selected_u_y = 0.0f;
     float selected_omega = 0.0f;
     float physics_centroid[2] = {0.0f, 0.0f};
+    const int streamline_count = 24;
+    int streamline_history_length = 120;
+    float streamline_dt = dt;
+    unsigned int streamline_seed = 1337u;
+    std::vector<std::vector<sf::Vector2f>> cached_streamlines;
     sf::Clock deltaClock;
 
 
@@ -172,6 +179,9 @@ int main() {
         ImGui::Checkbox("Render Velocities", &render_velocities_enabled);
         ImGui::SliderFloat("Normalization", &normalization_constant, 0.01f, 20.0f, "%.3f");
         ImGui::SliderInt("Thickness", &velocity_thickness, 1, 10);
+        ImGui::SliderInt("Streamline Points", &streamline_history_length, 2, 1000);
+        ImGui::SliderFloat("Streamline dt", &streamline_dt, 0.0001f, 0.05f, "%.5f");
+        const bool update_streamline_pressed = ImGui::Button("update-streamline");
         ImGui::Separator();
         ImGui::Text("Stream Function Convergence");
         ImGui::Text("Tolerance: %.2e", stream_convergence_tolerance);
@@ -228,6 +238,36 @@ int main() {
 
         if(render_velocities_enabled) {
             render_velocities(x, u, NX, NY, normalization_constant, velocity_thickness, physics_centroid, render_center, scaling, window);
+        }
+
+        if(update_streamline_pressed) {
+            streamline_seed += 1u;
+            std::mt19937 rng(streamline_seed);
+            std::uniform_real_distribution<float> unit_dist(0.0f, 1.0f);
+            cached_streamlines.clear();
+            cached_streamlines.reserve(streamline_count);
+
+            for(int streamline_idx = 0; streamline_idx < streamline_count; streamline_idx++) {
+                const float xi = unit_dist(rng);
+                const float eta = unit_dist(rng);
+                const float start_x = a * xi + b * eta * std::cos(θ);
+                const float start_y = b * eta * std::sin(θ);
+
+                std::vector<float> pos_history(static_cast<std::size_t>(streamline_history_length) * 2u);
+                obtain_streamline_path(x, u, u0, NX, NY, start_x, start_y, pos_history.data(), streamline_history_length, streamline_dt, dims);
+
+                std::vector<sf::Vector2f> positions;
+                positions.reserve(static_cast<std::size_t>(streamline_history_length));
+                for(int i = 0; i < streamline_history_length; i++) {
+                    positions.emplace_back(pos_history[2 * i], pos_history[2 * i + 1]);
+                }
+
+                cached_streamlines.push_back(std::move(positions));
+            }
+        }
+
+        for(const auto& streamline_positions : cached_streamlines) {
+            render_streamline_path(streamline_positions, physics_centroid, render_center, scaling, window, sf::Color::Cyan);
         }
 
         ImGui::SFML::Render(window);

@@ -441,3 +441,37 @@ void solve_boundary_vorticity_values(float* ω, const float u0, const float* ψ,
     ω[FLATTEN(nx-1, 0, nx, ny)] = 0.5f*(ω[FLATTEN(nx-2, 0, nx, ny)] + ω[FLATTEN(nx-1, 1, nx, ny)]); // Bottom-right corner
     ω[FLATTEN(nx-1, ny-1, nx, ny)] = 0.5f*(ω[FLATTEN(nx-2, ny-1, nx, ny)] + ω[FLATTEN(nx-1, ny-2, nx, ny)]); // Top-right corner
 }
+
+void obtain_streamline_path(const float* x, const float* u, const float u0, const int nx, const int ny, const float posx, const float posy, float* pos_history, const int history_length, const float dt, const float* dims){
+    float px = posx;
+    float py = posy;
+    const float one_one_sixths = 1.0f / 6.0f;
+    for(int i = 0; i < history_length; i++) {
+        pos_history[2*i] = px;
+        pos_history[2*i + 1] = py;
+        float u_x, u_y;
+        find_velocity_at_point(u_x, u_y, px, py, u, u0, nx, ny, dims);
+        float k1_x = -u_x;
+        float k1_y = -u_y;
+        float mid_px = px + 0.5f * dt * k1_x;
+        float mid_py = py + 0.5f * dt * k1_y;
+        float u_x2, u_y2;
+        find_velocity_at_point(u_x2, u_y2, mid_px, mid_py, u, u0, nx, ny, dims);
+        float k2_x = -u_x2;
+        float k2_y = -u_y2;
+        mid_px = px + 0.5f * dt * k2_x;
+        mid_py = py + 0.5f * dt * k2_y; 
+        float u_x3, u_y3;
+        find_velocity_at_point(u_x3, u_y3, mid_px, mid_py, u, u0, nx, ny, dims);
+        float k3_x = -u_x3;
+        float k3_y = -u_y3;
+        float end_px = px + dt * k3_x;
+        float end_py = py + dt * k3_y;
+        float u_x4, u_y4;
+        find_velocity_at_point(u_x4, u_y4, end_px, end_py, u, u0, nx, ny, dims);
+        float k4_x = -  u_x4;
+        float k4_y = -  u_y4;
+        px += (dt * one_one_sixths) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
+        py += (dt * one_one_sixths) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
+    }
+}

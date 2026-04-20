@@ -1,10 +1,13 @@
 #include<SFML/Graphics.hpp>
 #include <algorithm>
 #include <cmath>
+#include <random>
+#include <vector>
 #include "constants.hpp"
 #include "aux.hpp"
 
 void draw_arrow(const float px, const float py, const float dPx, const float dPy, sf::RenderWindow& window, const int thickness = 2, const float head_fraction = 0.2f, sf::Color colour = sf::Color::Red);
+void obtain_streamline_path(const float* x, const float* u, const float u0, const int nx, const int ny, const float posx, const float posy, float* pos_history, const int history_length, const float dt, const float* dims);
 
 sf::Color interpolate_colour(const sf::Color low, const sf::Color high, const float t) {
     const float clamped_t = std::clamp(t, 0.0f, 1.0f);
@@ -135,37 +138,57 @@ void draw_arrow(const float px, const float py, const float dPx, const float dPy
     window.draw(head);
 }
 
+void render_streamline_path(const std::vector<sf::Vector2f>& positions,
+								 const float centroid[2],
+								 const float render_center[2],
+								 const float scaling[2],
+								 sf::RenderWindow& window,
+								 sf::Color colour) {
+    if(positions.size() < 2) {
+        return;
+    }
 
-void obtain_streamline_path(const float* x, const float* u, const float u0, const int nx, const int ny, const float posx, const float posy, float* pos_history, const int history_length, const float dt, const float* dims){
-    float px = posx;
-    float py = posy;
-    const float one_one_sixths = 1.0f / 6.0f;
-    for(int i = 0; i < history_length; i++) {
-        pos_history[2*i] = px;
-        pos_history[2*i + 1] = py;
-        float u_x, u_y;
-        find_velocity_at_point(u_x, u_y, px, py, u, u0, nx, ny, dims);
-        float k1_x = -u_x;
-        float k1_y = -u_y;
-        float mid_px = px + 0.5f * dt * k1_x;
-        float mid_py = py + 0.5f * dt * k1_y;
-        float u_x2, u_y2;
-        find_velocity_at_point(u_x2, u_y2, mid_px, mid_py, u, u0, nx, ny, dims);
-        float k2_x = -u_x2;
-        float k2_y = -u_y2;
-        mid_px = px + 0.5f * dt * k2_x;
-        mid_py = py + 0.5f * dt * k2_y; 
-        float u_x3, u_y3;
-        find_velocity_at_point(u_x3, u_y3, mid_px, mid_py, u, u0, nx, ny, dims);
-        float k3_x = -u_x3;
-        float k3_y = -u_y3;
-        float end_px = px + dt * k3_x;
-        float end_py = py + dt * k3_y;
-        float u_x4, u_y4;
-        find_velocity_at_point(u_x4, u_y4, end_px, end_py, u, u0, nx, ny, dims);
-        float k4_x = -  u_x4;
-        float k4_y = -  u_y4;
-        px += (dt * one_one_sixths) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
-        py += (dt * one_one_sixths) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
+    sf::VertexArray line_strip(sf::PrimitiveType::LineStrip);
+    for(const auto& position : positions) {
+        sf::Vertex vertex;
+        vertex.position = {
+            render_center[0] + (position.x - centroid[0]) * scaling[0],
+            render_center[1] - (position.y - centroid[1]) * scaling[1]
+        };
+        vertex.color = colour;
+        line_strip.append(vertex);
+    }
+
+    window.draw(line_strip);
+}
+
+void render_random_streamlines(const float* x, const float* u, const float u0, const int nx, const int ny, const int streamline_count, const int history_length, const float dt, const float* dims, const float centroid[2], const float render_center[2], const float scaling[2], sf::RenderWindow& window, sf::Color colour, unsigned int seed) {
+
+    const float a = dims[0];
+    const float b = dims[1];
+    const float theta = dims[2];
+
+    std::mt19937 rng(seed); // Please kill me
+    std::uniform_real_distribution<float> unit_dist(0.0f, 1.0f); 
+
+    for(int streamline_idx = 0; streamline_idx < streamline_count; streamline_idx++) {
+        const float xi = unit_dist(rng);
+        const float eta = unit_dist(rng);
+        const float start_x = a * xi + b * eta * std::cos(theta);
+        const float start_y = b * eta * std::sin(theta);
+
+        std::vector<float> pos_history(static_cast<std::size_t>(history_length) * 2u);
+        obtain_streamline_path(x, u, u0, nx, ny, start_x, start_y, pos_history.data(), history_length, dt, dims);
+
+        std::vector<sf::Vector2f> positions;
+        positions.reserve(static_cast<std::size_t>(history_length));
+        for(int i = 0; i < history_length; i++) {
+            positions.emplace_back(pos_history[2 * i], pos_history[2 * i + 1]);
+        }
+
+        render_streamline_path(positions, centroid, render_center, scaling, window, colour);
     }
 }
+
+
+
