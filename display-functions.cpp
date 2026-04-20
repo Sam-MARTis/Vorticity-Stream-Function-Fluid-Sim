@@ -1,6 +1,7 @@
 #include<SFML/Graphics.hpp>
 #include <algorithm>
 #include <cmath>
+#include "constants.hpp"
 
 void draw_arrow(const float px, const float py, const float dPx, const float dPy, sf::RenderWindow& window, const int thickness = 2, const float head_fraction = 0.2f, sf::Color colour = sf::Color::Red);
 
@@ -58,7 +59,7 @@ void render_velocities(const float* x,
                        const float scaling[2],
                        sf::RenderWindow& window) {
     const float safe_norm = std::max(1e-6f, normalization_factor);
-    const float inv_normalization_factor = 1.0f / safe_norm;
+    const float inv_normalization_factor = BASE_ARROW_SIZE / safe_norm;
     const int stride = std::max(1, nx / 24);
 
     for(int j = 0; j < ny; j += stride) {

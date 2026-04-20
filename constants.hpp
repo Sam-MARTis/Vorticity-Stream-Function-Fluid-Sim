@@ -8,3 +8,5 @@ const float EPSILON1 = 1e-7;
 #define SCREEN_WIDTH_default 1000.0f
 #define SCREEN_HEIGHT_default 600.0f
 #define FRAME_RATE_LIMIT 60
+
+#define BASE_ARROW_SIZE 100.0f
