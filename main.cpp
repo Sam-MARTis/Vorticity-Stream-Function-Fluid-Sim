@@ -56,6 +56,11 @@ int main() {
     bool render_velocities_enabled = true;
     float normalization_constant = 1.0f;
     int velocity_thickness = 2;
+    float velocity_head_fraction = 0.2f;
+    int arrow_density_x = 24;
+    int arrow_density_y = 24;
+    bool standardize_velocity_sizes = false;
+    float standardized_vector_size = 40.0f;
     float low_colour[3] = {0.0f, 0.0f, 1.0f};
     float high_colour[3] = {1.0f, 0.0f, 0.0f};
     int iter = 0;
@@ -200,6 +205,13 @@ int main() {
         ImGui::Checkbox("Render Velocities", &render_velocities_enabled);
         ImGui::SliderFloat("Normalization", &normalization_constant, 0.01f, 20.0f, "%.3f");
         ImGui::SliderInt("Thickness", &velocity_thickness, 1, 10);
+        ImGui::SliderFloat("Arrow Head Fraction", &velocity_head_fraction, 0.01f, 0.5f, "%.2f");
+        ImGui::SliderInt("Arrow Density X", &arrow_density_x, 1, 100);
+        ImGui::SliderInt("Arrow Density Y", &arrow_density_y, 1, 100);
+        ImGui::Checkbox("Standardize sizes", &standardize_velocity_sizes);
+        if(standardize_velocity_sizes) {
+            ImGui::SliderFloat("Vector Size", &standardized_vector_size, 1.0f, 200.0f, "%.2f");
+        }
         ImGui::Separator();
         ImGui::Text("Streamlines");
         ImGui::Checkbox("Uniform Seed Spacing", &use_uniform_streamline_seeds);
@@ -264,7 +276,7 @@ int main() {
         }
 
         if(render_velocities_enabled) {
-            render_velocities(x, u, NX, NY, normalization_constant, velocity_thickness, physics_centroid, render_center, scaling, window);
+            render_velocities(x, u, NX, NY, normalization_constant, velocity_thickness, velocity_head_fraction, standardize_velocity_sizes, standardized_vector_size, arrow_density_x, arrow_density_y, physics_centroid, render_center, scaling, window);
         }
 
         if(update_streamline_pressed) {

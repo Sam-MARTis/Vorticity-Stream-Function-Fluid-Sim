@@ -21,16 +21,7 @@ sf::Color interpolate_colour(const sf::Color low, const sf::Color high, const fl
 }
 
 
-void render_scalar_field(const float* x,
-                         const float* values,
-                         const int nx,
-                         const int ny,
-                         const float centroid[2],
-                         const float render_center[2],
-                         const float scaling[2],
-                         const sf::Color low_colour,
-                         const sf::Color high_colour,
-                         sf::RenderWindow& window) {
+void render_scalar_field(const float* x, const float* values, const int nx, const int ny, const float centroid[2], const float render_center[2], const float scaling[2], const sf::Color low_colour, const sf::Color high_colour, sf::RenderWindow& window) {
     const int count = nx * ny;
     if(count <= 0 || nx < 2 || ny < 2) {
         return;
@@ -86,28 +77,33 @@ void render_scalar_field(const float* x,
     window.draw(cells);
 }
 
-void render_velocities(const float* x,
-                       const float* u,
-                       const int nx,
-                       const int ny,
-                       const float normalization_factor,
-                       const int thickness,
-                       const float centroid[2],
-                       const float render_center[2],
-                       const float scaling[2],
-                       sf::RenderWindow& window) {
+void render_velocities(const float* x, const float* u, const int nx, const int ny, const float normalization_factor, const int thickness, const float head_fraction, const bool standardize_sizes, const float standardized_vector_size, const int density_x, const int density_y, const float centroid[2], const float render_center[2], const float scaling[2], sf::RenderWindow& window) {
     const float safe_norm = std::max(1e-6f, normalization_factor);
     const float inv_normalization_factor = BASE_ARROW_SIZE / safe_norm;
-    const int stride = std::max(1, nx / 24);
+    const int stride_x = std::max(1, nx / std::max(1, density_x));
+    const int stride_y = std::max(1, ny / std::max(1, density_y));
 
-    for(int j = 0; j < ny; j += stride) {
-        for(int i = 0; i < nx; i += stride) {
+    for(int j = 0; j < ny; j += stride_y) {
+        for(int i = 0; i < nx; i += stride_x) {
             const int idx = j * nx + i;
             const float px = render_center[0] + (x[2 * idx] - centroid[0]) * scaling[0];
             const float py = render_center[1] - (x[2 * idx + 1] - centroid[1]) * scaling[1];
-            const float u_x = u[2 * idx] * inv_normalization_factor;
-            const float u_y = -u[2 * idx + 1] * inv_normalization_factor;
-            draw_arrow(px, py, u_x, u_y, window, thickness);
+            float u_x = 0.0f;
+            float u_y = 0.0f;
+            if(standardize_sizes) {
+                const float velocity_x = u[2 * idx];
+                const float velocity_y = -u[2 * idx + 1];
+                const float velocity_length = std::sqrt(velocity_x * velocity_x + velocity_y * velocity_y);
+                if(velocity_length > 1e-6f) {
+                    const float scale = standardized_vector_size / velocity_length;
+                    u_x = velocity_x * scale;
+                    u_y = velocity_y * scale;
+                }
+            } else {
+                u_x = u[2 * idx] * inv_normalization_factor;
+                u_y = -u[2 * idx + 1] * inv_normalization_factor;
+            }
+            draw_arrow(px, py, u_x, u_y, window, thickness, head_fraction);
         }
     }
 }
