@@ -20,7 +20,8 @@ void render_scalar_field(const float* x,
                          const float* values,
                          const int nx,
                          const int ny,
-                         const float origin[2],
+                         const float centroid[2],
+                         const float render_center[2],
                          const float scaling[2],
                          const sf::Color low_colour,
                          const sf::Color high_colour,
@@ -44,7 +45,8 @@ void render_scalar_field(const float* x,
     for(int idx = 0; idx < count; idx++) {
         const float normalized = (values[idx] - min_val) / range;
         cell.setFillColor(interpolate_colour(low_colour, high_colour, normalized));
-        cell.setPosition(sf::Vector2f(origin[0] + x[2 * idx] * scaling[0], origin[1] - x[2 * idx + 1] * scaling[1]));
+        cell.setPosition(sf::Vector2f(render_center[0] + (x[2 * idx] - centroid[0]) * scaling[0],
+                                      render_center[1] - (x[2 * idx + 1] - centroid[1]) * scaling[1]));
         window.draw(cell);
     }
 }
@@ -55,7 +57,8 @@ void render_velocities(const float* x,
                        const int ny,
                        const float normalization_factor,
                        const int thickness,
-                       const float origin[2],
+                       const float centroid[2],
+                       const float render_center[2],
                        const float scaling[2],
                        sf::RenderWindow& window) {
     const float safe_norm = std::max(1e-6f, normalization_factor);
@@ -65,8 +68,8 @@ void render_velocities(const float* x,
     for(int j = 0; j < ny; j += stride) {
         for(int i = 0; i < nx; i += stride) {
             const int idx = j * nx + i;
-            const float px = origin[0] + x[2 * idx] * scaling[0];
-            const float py = origin[1] - x[2 * idx + 1] * scaling[1];
+            const float px = render_center[0] + (x[2 * idx] - centroid[0]) * scaling[0];
+            const float py = render_center[1] - (x[2 * idx + 1] - centroid[1]) * scaling[1];
             const float u_x = u[2 * idx] * inv_normalization_factor;
             const float u_y = -u[2 * idx + 1] * inv_normalization_factor;
             draw_arrow(px, py, u_x, u_y, window, thickness);

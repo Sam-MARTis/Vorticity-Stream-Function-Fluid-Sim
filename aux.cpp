@@ -2,6 +2,7 @@
 #include <string>
 #include <cmath>
 #include "constants.hpp"
+#include "SFML/Graphics.hpp"
 
 void print(const std::string& message) {
     std::cout << message << std::endl;
@@ -73,4 +74,35 @@ void find_vorticity_at_point(float& ω_val, const float px, const float py, cons
     ω_local[2] = ω[(j+1)*nx + (i+1)];
     ω_local[3] = ω[j*nx + (i+1)];
     ω_val = (ω_local[0] * (1-i_frac) + ω_local[3] * i_frac) * (1-j_frac) + (ω_local[1] * (1-i_frac) + ω_local[2] * i_frac) * j_frac;
+}
+
+bool map_screen_to_world(const sf::Vector2i& screen_point,
+                         float& world_x,
+                         float& world_y,
+                         const float centroid[2],
+                         const float render_center[2],
+                         const float scaling[2],
+                         const float* dims) {
+    world_x = centroid[0] + (static_cast<float>(screen_point.x) - render_center[0]) / scaling[0];
+    world_y = centroid[1] - (static_cast<float>(screen_point.y) - render_center[1]) / scaling[1];
+
+    const float a = dims[0];
+    const float b = dims[1];
+    const float theta = dims[2];
+    const float p_xi = (world_x - world_y / std::tan(theta)) / a;
+    const float p_eta = world_y / (b * std::sin(theta));
+
+    return p_xi >= 0.0f && p_xi <= 1.0f && p_eta >= 0.0f && p_eta <= 1.0f;
+}
+
+void compute_physics_centroid(const float* x, const int nx, const int ny, float centroid[2]) {
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    const int count = nx * ny;
+    for(int idx = 0; idx < count; idx++) {
+        sum_x += x[2 * idx];
+        sum_y += x[2 * idx + 1];
+    }
+    centroid[0] = static_cast<float>(sum_x / count);
+    centroid[1] = static_cast<float>(sum_y / count);
 }

@@ -19,23 +19,7 @@ const int SCREEN_OFFSET_Y = SCREEN_OFFSET_Y_default;
 const int SCREEN_END_X_PADDING = SCREEN_END_X_PADDING_default;
 const int SCREEN_END_Y_PADDING = SCREEN_END_Y_PADDING_default;
 
-bool map_screen_to_world(const sf::Vector2i& screen_point,
-                         float& world_x,
-                         float& world_y,
-                         const float origin[2],
-                         const float scaling[2],
-                         const float* dims) {
-    world_x = (static_cast<float>(screen_point.x) - origin[0]) / scaling[0];
-    world_y = (origin[1] - static_cast<float>(screen_point.y)) / scaling[1];
 
-    const float a = dims[0];
-    const float b = dims[1];
-    const float theta = dims[2];
-    const float p_xi = (world_x - world_y / std::tan(theta)) / a;
-    const float p_eta = world_y / (b * std::sin(theta));
-
-    return p_xi >= 0.0f && p_xi <= 1.0f && p_eta >= 0.0f && p_eta <= 1.0f;
-}
 
 int main() {
     const float a = 1.0f;
@@ -51,7 +35,6 @@ int main() {
     const float u0 = 1.0f;
     float reynolds_number = 100.0f;
     float nu = u0 * std::sqrt(a * b) / reynolds_number;
-    const float origin[2] = {static_cast<float>(SCREEN_OFFSET_X), static_cast<float>(SCREEN_OFFSET_Y + SCREEN_HEIGHT)};
     const float dims[3] = {a, b, θ};
     float* ψ = new float[NX*NY];
     float* ω = new float[NX*NY];
@@ -62,7 +45,10 @@ int main() {
     window.create(sf::VideoMode({SCREEN_WIDTH + (SCREEN_OFFSET_X + SCREEN_END_X_PADDING), SCREEN_HEIGHT + (SCREEN_OFFSET_Y + SCREEN_END_Y_PADDING)}, 10), "Fluid Simulation");
     window.setFramerateLimit(FRAME_RATE_LIMIT);
     ImGui::SFML::Init(window);
-    const float scaling[2] = {SCREEN_WIDTH/(a + b*std::cos(θ))*0.5, SCREEN_WIDTH/(a + b*std::cos(θ))*0.5};
+    float render_center[2] = {280.0f, 500.0f};
+    float render_magnification = 1.4f;
+    const float base_scaling[2] = {SCREEN_WIDTH/(a + b*std::cos(θ))*0.5f, SCREEN_WIDTH/(a + b*std::cos(θ))*0.5f};
+    float scaling[2] = {base_scaling[0] * render_magnification, base_scaling[1] * render_magnification};
 
     int render_mode = 0;
     bool render_velocities_enabled = true;
@@ -89,11 +75,13 @@ int main() {
     float selected_u_x = 0.0f;
     float selected_u_y = 0.0f;
     float selected_omega = 0.0f;
+    float physics_centroid[2] = {0.0f, 0.0f};
     sf::Clock deltaClock;
 
 
 
     setup_inital_state(ψ, ω, x, u, NX, NY, dims, u0);
+    compute_physics_centroid(x, NX, NY, physics_centroid);
     stream_is_converged = check_stream_function_convergence(ψ, ω, NX, NY, dims, stream_convergence_tolerance, stream_max_residual);
     
     while(window.isOpen()) {
@@ -107,7 +95,7 @@ int main() {
                     const sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
                     float world_x = 0.0f;
                     float world_y = 0.0f;
-                    const bool is_inside_domain = map_screen_to_world(mouse_pos, world_x, world_y, origin, scaling, dims);
+                    const bool is_inside_domain = map_screen_to_world(mouse_pos, world_x, world_y, physics_centroid, render_center, scaling, dims);
                     if(is_inside_domain) {
                         has_selected_point = true;
                         selected_world_x = world_x;
@@ -160,6 +148,11 @@ int main() {
         }
         ImGui::Separator();
         ImGui::Text("Stream Function Solver");
+        ImGui::SliderFloat("Domain Magnification", &render_magnification, 0.1f, 10.0f, "%.3f");
+        ImGui::SliderFloat("Centroid Screen X", &render_center[0], 0.0f, static_cast<float>(window.getSize().x), "%.1f");
+        ImGui::SliderFloat("Centroid Screen Y", &render_center[1], 0.0f, static_cast<float>(window.getSize().y), "%.1f");
+        scaling[0] = base_scaling[0] * render_magnification;
+        scaling[1] = base_scaling[1] * render_magnification;
         ImGui::Checkbox("Enable Parallelization", &enable_solver_parallelization);
         if(enable_solver_parallelization) {
             ImGui::SliderInt("Max Threads", &solver_max_threads, 1, 64);
@@ -228,13 +221,13 @@ int main() {
                                 static_cast<unsigned char>(high_colour[2] * 255.0f));
 
         if(render_mode == 1) {
-            render_scalar_field(x, ω, NX, NY, origin, scaling, low_sf, high_sf, window);
+            render_scalar_field(x, ω, NX, NY, physics_centroid, render_center, scaling, low_sf, high_sf, window);
         } else if(render_mode == 2) {
-            render_scalar_field(x, ψ, NX, NY, origin, scaling, low_sf, high_sf, window);
+            render_scalar_field(x, ψ, NX, NY, physics_centroid, render_center, scaling, low_sf, high_sf, window);
         }
 
         if(render_velocities_enabled) {
-            render_velocities(x, u, NX, NY, normalization_constant, velocity_thickness, origin, scaling, window);
+            render_velocities(x, u, NX, NY, normalization_constant, velocity_thickness, physics_centroid, render_center, scaling, window);
         }
 
         ImGui::SFML::Render(window);
