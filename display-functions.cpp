@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include "constants.hpp"
+#include "aux.hpp"
 
 void draw_arrow(const float px, const float py, const float dPx, const float dPy, sf::RenderWindow& window, const int thickness = 2, const float head_fraction = 0.2f, sf::Color colour = sf::Color::Red);
 
@@ -63,12 +64,19 @@ void render_scalar_field(const float* x,
             const sf::Vector2f p_tl = to_screen(idx_tl);
             const sf::Vector2f p_tr = to_screen(idx_tr);
 
-            cells.append(sf::Vertex(p_bl, colour));
-            cells.append(sf::Vertex(p_br, colour));
-            cells.append(sf::Vertex(p_tr, colour));
-            cells.append(sf::Vertex(p_bl, colour));
-            cells.append(sf::Vertex(p_tr, colour));
-            cells.append(sf::Vertex(p_tl, colour));
+            const sf::Vertex vertices[6] = {
+                {p_bl, colour},
+                {p_br, colour},
+                {p_tr, colour},
+                {p_bl, colour},
+                {p_tr, colour},
+                {p_tl, colour}
+            };
+
+       
+            for(const auto& vertex : vertices) {
+                cells.append(vertex);
+            }
         }
     }
 
@@ -127,31 +135,37 @@ void draw_arrow(const float px, const float py, const float dPx, const float dPy
     window.draw(head);
 }
 
-// void drawArrow(sf::RenderWindow &window, sf::Vector2f start, sf::Vector2f end,
-//                int thickness = 2, float head_fraction = 0.2f,
-//                sf::Color colour = sf::Color::Red)
-// {
-//     sf::Vector2f direction = end - start;
-//     float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-//     sf::Angle angleDegrees = std::atan2(direction.y, direction.x) * sf::radians(1);
 
-//     float head_length = length * head_fraction;
-//     sf::RectangleShape line(sf::Vector2f(length - head_length, (float)thickness));
-//     line.setOrigin({0, (float)thickness * 0.5f});
-//     line.setPosition(start);
-//     line.setRotation(angleDegrees);
-//     line.setFillColor(colour);
-
-//     sf::ConvexShape head;
-//     head.setPointCount(3);
-//     head.setPoint(0, {0, 0});
-//     head.setPoint(1, {-head_length, head_length * 0.5f});
-//     head.setPoint(2, {-head_length, -head_length * 0.5f});
-//     head.setFillColor(colour);
-
-//     head.setPosition(end);
-//     head.setRotation(angleDegrees);
-
-//     window.draw(line);
-//     window.draw(head);
-// }
+void obtain_streamline_path(const float* x, const float* u, const float u0, const int nx, const int ny, const float posx, const float posy, float* pos_history, const int history_length, const float dt, const float* dims){
+    float px = posx;
+    float py = posy;
+    const float one_one_sixths = 1.0f / 6.0f;
+    for(int i = 0; i < history_length; i++) {
+        pos_history[2*i] = px;
+        pos_history[2*i + 1] = py;
+        float u_x, u_y;
+        find_velocity_at_point(u_x, u_y, px, py, u, u0, nx, ny, dims);
+        float k1_x = -u_x;
+        float k1_y = -u_y;
+        float mid_px = px + 0.5f * dt * k1_x;
+        float mid_py = py + 0.5f * dt * k1_y;
+        float u_x2, u_y2;
+        find_velocity_at_point(u_x2, u_y2, mid_px, mid_py, u, u0, nx, ny, dims);
+        float k2_x = -u_x2;
+        float k2_y = -u_y2;
+        mid_px = px + 0.5f * dt * k2_x;
+        mid_py = py + 0.5f * dt * k2_y; 
+        float u_x3, u_y3;
+        find_velocity_at_point(u_x3, u_y3, mid_px, mid_py, u, u0, nx, ny, dims);
+        float k3_x = -u_x3;
+        float k3_y = -u_y3;
+        float end_px = px + dt * k3_x;
+        float end_py = py + dt * k3_y;
+        float u_x4, u_y4;
+        find_velocity_at_point(u_x4, u_y4, end_px, end_py, u, u0, nx, ny, dims);
+        float k4_x = -  u_x4;
+        float k4_y = -  u_y4;
+        px += (dt * one_one_sixths) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
+        py += (dt * one_one_sixths) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
+    }
+}

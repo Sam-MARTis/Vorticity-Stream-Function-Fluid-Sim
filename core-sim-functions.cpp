@@ -73,7 +73,8 @@ void apply_viscosity(float* ω, const int nx, const int ny, const float nu, cons
 void advect_vorticity(float* ω, const float* x, const float* u, const float u0, const int nx, const int ny, const float dt, const float* dims) {
     float* ω_new = new float[nx * ny];
     std::cout<<"Advecting vorticity with dt: "<<dt<<std::endl;
-     const float a = dims[0];
+    const float a = dims[0];
+    const float one_one_sixths = 1.0f / 6.0f;
     #pragma omp parallel for collapse(2) if(g_enable_solver_parallelization)
     for(int i=0; i < nx; i++) {
         for(int j=0; j < ny; j++) {
@@ -102,8 +103,8 @@ void advect_vorticity(float* ω, const float* x, const float* u, const float u0,
             find_velocity_at_point(u_x4, u_y4, end_px, end_py, u, u0, nx, ny, dims);
             float k4_x = -  u_x4;
             float k4_y = -  u_y4;
-            float back_px = px + (dt / 6.0f) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
-            float back_py = py + (dt / 6.0f) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
+            float back_px = px + (dt * one_one_sixths) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
+            float back_py = py + (dt * one_one_sixths) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
 
             float ω_back;
             find_vorticity_at_point(ω_back, back_px, back_py, ω, nx, ny, dims);
@@ -154,6 +155,7 @@ void transport_vorticity_combined(float* ω, const float* x, const float* u, con
             ω_new[idx] = ω[idx] + nu * laplacian * dt;
         }
     }
+    const float one_one_sixths = 1.0f / 6.0f;
     #pragma omp parallel for collapse(2) if(g_enable_solver_parallelization)
     for(int i=0; i < nx; i++) {
         for(int j=0; j < ny; j++) {
@@ -182,8 +184,8 @@ void transport_vorticity_combined(float* ω, const float* x, const float* u, con
             find_velocity_at_point(u_x4, u_y4, end_px, end_py, u, u0, nx, ny, dims);
             float k4_x = -  u_x4;
             float k4_y = -  u_y4;
-            float back_px = px + (dt / 6.0f) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
-            float back_py = py + (dt / 6.0f) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
+            float back_px = px + (dt * one_one_sixths) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
+            float back_py = py + (dt * one_one_sixths) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
 
             float ω_back;
             find_vorticity_at_point(ω_back, back_px, back_py, ω, nx, ny, dims);
