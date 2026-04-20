@@ -80,7 +80,8 @@ int main() {
     float physics_centroid[2] = {0.0f, 0.0f};
     int streamline_history_length = 1200;
     int streamline_count = 100;
-    float streamline_dt = dt;
+    float streamline_dt = dt * 100.0f;
+    float streamline_max_time_exponent = 0.0f;
     float streamline_max_time = 1.0f;
     bool use_uniform_streamline_seeds = false;
     unsigned int streamline_seed = 1337u;
@@ -184,9 +185,11 @@ int main() {
         ImGui::Separator();
         ImGui::Text("Streamlines");
         ImGui::Checkbox("Uniform Seed Spacing", &use_uniform_streamline_seeds);
-        ImGui::SliderInt("Num Seed Points", &streamline_count, 2, 5000);
-        ImGui::SliderFloat("Streamline dt", &streamline_dt, 0.0001f, 0.05f, "%.5f");
-        ImGui::SliderFloat("Streamline Max Time", &streamline_max_time, 0.01f, 25.0f, "%.3f");
+        ImGui::SliderInt("Num Seed Points", &streamline_count, 2, 500);
+        ImGui::SliderFloat("Streamline dt", &streamline_dt, 0.0001f, 0.5f, "%.6f");
+        ImGui::SliderFloat("Streamline Max Time Exponent", &streamline_max_time_exponent, -2.0f, 4.5f, "%.2f");
+        streamline_max_time = std::pow(10.0f, streamline_max_time_exponent);
+        ImGui::Text("Streamline Max Time: %.3e", streamline_max_time);
         const bool update_streamline_pressed = ImGui::Button("update-streamline");
         ImGui::Separator();
         ImGui::Text("Stream Function Convergence");
@@ -257,8 +260,8 @@ int main() {
 
             const int grid_cols = std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(streamline_count)))));
             const int grid_rows = std::max(1, static_cast<int>(std::floor(std::sqrt(static_cast<float>(streamline_count)))));
-            std::cout << "Grid: " << grid_cols << " cols x " << grid_rows << " rows." << std::endl;
-            std::cout << "Streamline count: " << streamline_count << ", effective history length: " << history_length << std::endl;
+            // std::cout << "Grid: " << grid_cols << " cols x " << grid_rows << " rows." << std::endl;
+            // std::cout << "Streamline count: " << streamline_count << ", effective history length: " << history_length << std::endl;
             cached_streamlines.resize(static_cast<std::size_t>(streamline_count));
 
             #pragma omp parallel for schedule(dynamic) if(enable_solver_parallelization)
