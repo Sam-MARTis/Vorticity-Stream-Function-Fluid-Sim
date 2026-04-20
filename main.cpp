@@ -38,8 +38,8 @@ bool map_screen_to_world(const sf::Vector2i& screen_point,
 }
 
 int main() {
-    const float a = 10.0f;
-    const float b = 10.0f;
+    const float a = 1.0f;
+    const float b = 1.0f;
     const float θ = M_PI/2.0f;
 
     // const int NX = 100;

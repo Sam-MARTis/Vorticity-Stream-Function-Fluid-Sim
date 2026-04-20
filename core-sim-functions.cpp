@@ -277,7 +277,18 @@ void solve_stream_function_update(float* ψ, const float* ω, const int nx, cons
     if(ψ_curr != ψ) {
         std::copy(ψ_curr, ψ_curr + (nx * ny), ψ);
     }
+    for(int i=0; i<nx; i++){
+        
+        ψ[i] = 0.0f; 
 
+        ψ[(ny-1)*nx + i] = 0.0f;
+    }
+    for(int j=0; j<ny; j++) {
+
+        ψ[j*nx] = 0.0f;
+
+        ψ[j*nx + (nx-1)] = 0.0f;
+    }
     delete[] ψ_new;
 }
 
@@ -320,7 +331,7 @@ bool check_stream_function_convergence(const float* ψ, const float* ω, const i
             max_residual = std::max(max_residual, std::abs(residual));
         }
     }
-
+    
     return max_residual < tolerance;
 }
 
@@ -409,13 +420,17 @@ void solve_boundary_vorticity_values(float* ω, const float u0, const float* ψ,
         
         // Wall 4
         // const float d2ψdξdη_top = -(ψ[(ny-1)*nx + (i+1)] - ψ[(ny-1)*nx + (i-1)])/(4*dξ*dη);
-        ω[(ny-1)*nx + i] = -2*(-(ψ[(ny-1)*nx + (i+1)] - ψ[(ny-1)*nx + (i-1)] ) * a2 + a3*(ψ[(ny-1)*nx + i] + u0*yη));
+        ω[(ny-1)*nx + i] = -2*(-(ψ[(ny-1)*nx + (i+1)] - ψ[(ny-1)*nx + (i-1)] ) * a2 + a3*(ψ[(ny-1)*nx + i] + u0*yη*dη));
 
     }
 
     // Corner points
-    ω[0] = -2*(a2*(ψ[nx + 1])); // Bottom-left corner
-    ω[(ny-1)*nx] = -2*(-a2*ψ[((ny-1)-1)*nx + 1]); // Top-left corner
-    ω[(nx-1)] = -2*(a2*(-(ψ[nx + (nx-2)]))); // Bottom-right corner
-    ω[ny*nx -1] = -2*( a2*(ψ[((ny-1)-1)*nx + (nx-2)])); // Top-right corner
+    // ω[0] = -2*(a2*(ψ[nx + 1])); // Bottom-left corner
+    // ω[(ny-1)*nx] = -2*(-a2*ψ[((ny-1)-1)*nx + 1]); // Top-left corner
+    // ω[(nx-1)] = -2*(a2*(-(ψ[nx + (nx-2)]))); // Bottom-right corner
+    // ω[ny*nx -1] = -2*( a2*(ψ[((ny-1)-1)*nx + (nx-2)])); // Top-right corner
+    ω[0] = 0.5f*(ω[nx] + ω[1]); // Bottom-left corner
+    ω[(ny-1)*nx] = 0.5f*(ω[(ny-2)*nx] + ω[(ny-1)*nx + 1]); // Top-left corner
+    ω[(nx-1)] = 0.5f*(ω[nx + (nx-2)] + ω[(nx-1) + 1]); // Bottom-right corner
+    ω[ny*nx -1] = 0.5f*(ω[((ny-1)-1)*nx + (nx-1)] + ω[(ny-1)*nx + (nx-2)]); // Top-right corner
 }

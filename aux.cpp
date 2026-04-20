@@ -19,7 +19,7 @@ void find_velocity_at_point(float& u_x, float& u_y, const float px, const float 
     const int j = static_cast<int>(std::floor(pη / dη));
     // const int i = static_cast<int>(px / dx);
     // const int j = static_cast<int>(py / dy);
-    if(i < 0 || i >= nx-1 || j < 0) {
+    if(i < 0 || i >= nx-1 || j < 0 || j >= ny-1) {
         u_x = u0 * (j >= ny-1); // top boundary has velocity u0, others have velocity 0
         u_y = 0.0f;
         return;
