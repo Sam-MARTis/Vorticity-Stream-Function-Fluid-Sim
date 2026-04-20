@@ -12,8 +12,8 @@
 #include "imgui-SFML.h"
 
 sf::RenderWindow window;
-const int NX = 50;
-const int NY = 50;
+const int NX = 100;
+const int NY = 100;
 const int SCREEN_WIDTH = SCREEN_WIDTH_default;
 const int SCREEN_HEIGHT = SCREEN_HEIGHT_default;
 const int SCREEN_OFFSET_X = SCREEN_OFFSET_X_default;
@@ -33,7 +33,7 @@ int main() {
     // const float dx = ;
     // const float dy = 0.01f;
 
-    const float dt = 0.001f;
+    const float dt = 0.0001f;
     const float u0 = 1.0f;
     float reynolds_number = 100.0f;
     float nu = u0 * std::sqrt(a * b) / reynolds_number;
@@ -78,9 +78,11 @@ int main() {
     float selected_u_y = 0.0f;
     float selected_omega = 0.0f;
     float physics_centroid[2] = {0.0f, 0.0f};
-    const int streamline_count = 24;
-    int streamline_history_length = 120;
+    int streamline_history_length = 1200;
+    int streamline_count = 100;
     float streamline_dt = dt;
+    float streamline_max_time = 1.0f;
+    bool use_uniform_streamline_seeds = false;
     unsigned int streamline_seed = 1337u;
     std::vector<std::vector<sf::Vector2f>> cached_streamlines;
     sf::Clock deltaClock;
@@ -179,8 +181,12 @@ int main() {
         ImGui::Checkbox("Render Velocities", &render_velocities_enabled);
         ImGui::SliderFloat("Normalization", &normalization_constant, 0.01f, 20.0f, "%.3f");
         ImGui::SliderInt("Thickness", &velocity_thickness, 1, 10);
-        ImGui::SliderInt("Streamline Points", &streamline_history_length, 2, 1000);
+        ImGui::Separator();
+        ImGui::Text("Streamlines");
+        ImGui::Checkbox("Uniform Seed Spacing", &use_uniform_streamline_seeds);
+        ImGui::SliderInt("Num Seed Points", &streamline_count, 2, 5000);
         ImGui::SliderFloat("Streamline dt", &streamline_dt, 0.0001f, 0.05f, "%.5f");
+        ImGui::SliderFloat("Streamline Max Time", &streamline_max_time, 0.01f, 25.0f, "%.3f");
         const bool update_streamline_pressed = ImGui::Button("update-streamline");
         ImGui::Separator();
         ImGui::Text("Stream Function Convergence");
@@ -246,23 +252,44 @@ int main() {
             std::uniform_real_distribution<float> unit_dist(0.0f, 1.0f);
             cached_streamlines.clear();
             cached_streamlines.reserve(streamline_count);
+            const float safe_streamline_dt = std::max(1e-6f, streamline_dt);
+            const int history_length = std::max(2, static_cast<int>(std::floor(streamline_max_time / safe_streamline_dt)));
 
+            const int grid_cols = std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(streamline_count)))));
+            const int grid_rows = std::max(1, static_cast<int>(std::floor(std::sqrt(static_cast<float>(streamline_count)))));
+            std::cout << "Grid: " << grid_cols << " cols x " << grid_rows << " rows." << std::endl;
+            std::cout << "Streamline count: " << streamline_count << ", effective history length: " << history_length << std::endl;
+            cached_streamlines.resize(static_cast<std::size_t>(streamline_count));
+
+            #pragma omp parallel for schedule(dynamic) if(enable_solver_parallelization)
             for(int streamline_idx = 0; streamline_idx < streamline_count; streamline_idx++) {
-                const float xi = unit_dist(rng);
-                const float eta = unit_dist(rng);
+                const int row = streamline_idx / grid_cols;
+                const int col = streamline_idx % grid_cols;
+
+                float xi = 0.0f;
+                float eta = 0.0f;
+                if(use_uniform_streamline_seeds) {
+                    xi = (static_cast<float>(col) + 0.5f) / static_cast<float>(grid_cols);
+                    eta = (static_cast<float>(row) + 0.5f) / static_cast<float>(grid_rows);
+                } else {
+                    std::mt19937 local_rng(streamline_seed + static_cast<unsigned int>(streamline_idx));
+                    std::uniform_real_distribution<float> local_unit_dist(0.0f, 1.0f);
+                    xi = local_unit_dist(local_rng);
+                    eta = local_unit_dist(local_rng);
+                }
+
                 const float start_x = a * xi + b * eta * std::cos(θ);
                 const float start_y = b * eta * std::sin(θ);
 
-                std::vector<float> pos_history(static_cast<std::size_t>(streamline_history_length) * 2u);
-                obtain_streamline_path(x, u, u0, NX, NY, start_x, start_y, pos_history.data(), streamline_history_length, streamline_dt, dims);
+                std::vector<float> pos_history(static_cast<std::size_t>(history_length) * 2u);
+                obtain_streamline_path(x, u, u0, NX, NY, start_x, start_y, pos_history.data(), history_length, safe_streamline_dt, dims);
 
-                std::vector<sf::Vector2f> positions;
-                positions.reserve(static_cast<std::size_t>(streamline_history_length));
-                for(int i = 0; i < streamline_history_length; i++) {
-                    positions.emplace_back(pos_history[2 * i], pos_history[2 * i + 1]);
+                std::vector<sf::Vector2f> positions(static_cast<std::size_t>(history_length));
+                for(int i = 0; i < history_length; i++) {
+                    positions[static_cast<std::size_t>(i)] = {pos_history[2 * i], pos_history[2 * i + 1]};
                 }
 
-                cached_streamlines.push_back(std::move(positions));
+                cached_streamlines[static_cast<std::size_t>(streamline_idx)] = std::move(positions);
             }
         }
 

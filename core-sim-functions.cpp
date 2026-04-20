@@ -417,7 +417,8 @@ void solve_boundary_vorticity_values(float* ω, const float u0, const float* ψ,
         // Wall 3
         // const float d2ψdξdη_right = -(ψ[FLATTEN(nx-2, j+1, nx, ny)] - ψ[FLATTEN(nx-2, j-1, nx, ny)])/(4*dξ*dη);
         // ω[FLATTEN(nx-1, j, nx, ny)] = -2*(a1*ψ[FLATTEN(nx-2, j, nx, ny)]+ a2*(-(ψ[FLATTEN(nx-2, j+1, nx, ny)] - ψ[FLATTEN(nx-2, j-1, nx, ny)])));
-        ω[FLATTEN(nx-1, j, nx, ny)*2] = -2*(t1*ψ[FLATTEN(nx-2, j, nx, ny)]);
+        // ω[FLATTEN(nx-1, j, nx, ny)*2] = -2*(t1*ψ[FLATTEN(nx-2, j, nx, ny)]); //WTF? Why did I put a 2 there?!
+        ω[FLATTEN(nx-1, j, nx, ny)] = -2*(t1*ψ[FLATTEN(nx-2, j, nx, ny)]); 
     }
 
     for(int i=1; i < nx-1; i++) {
