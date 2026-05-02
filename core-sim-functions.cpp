@@ -24,6 +24,9 @@ void set_solver_parallelization(const bool enable_parallelization, const int max
 
 // void advect_vorticity(float* ω, const float* x, const float* u, float u0, int nx, int ny, float dt, const float* dims);
 
+inline float square(float x) {
+    return x * x;
+}
 void apply_viscosity(float* ω, const int nx, const int ny, const float nu, const float dt, const float* dims) {
 
     // const float inv_dx_squared = 1.0f / (dx * dx);
@@ -119,8 +122,8 @@ void transport_vorticity_combined(float* ω, const float* x, const float* u, con
     float* ω_new = new float[nx * ny];
     const float dξ = 1.0f/nx;
     const float dη = 1.0f/ny;
-    const float inv_dξ_squared = 1.0f / (dξ * dξ);
-    const float inv_dη_squared = 1.0f / (dη * dη);
+    const float inv_dξ_squared = 1.0f / square(dξ);
+    const float inv_dη_squared = 1.0f / square(dη);
     const float inv_dξdη = 1.0f / (dξ * dη);
     if(dt > 0.5f * (1.0f/(nu * (inv_dξ_squared + inv_dη_squared)))) {
         print("Warning: Time step may be too large for stability with the given viscosity.");
@@ -135,63 +138,63 @@ void transport_vorticity_combined(float* ω, const float* x, const float* u, con
 
     std::copy(ω, ω + (nx * ny), ω_new);
     #pragma omp parallel for collapse(2) if(g_enable_solver_parallelization)
-    for(int i=1; i < nx-1; i++) {
-        for(int j=1; j < ny-1; j++) {
-            const int idx = FLATTEN(i, j, nx, ny);
-            const float& ω_center = ω[idx];
-            const float& ω_left =  ω[FLATTEN(i-1, j, nx, ny)];
-            const float& ω_right = ω[FLATTEN(i+1, j, nx, ny)];
-            const float& ω_down = ω[FLATTEN(i, j-1, nx, ny)];
-            const float& ω_up =  ω[FLATTEN(i, j+1, nx, ny)];
-            const float& ω_down_left = ω[FLATTEN(i-1, j-1, nx, ny)];
-            const float& ω_down_right = ω[FLATTEN(i+1, j-1, nx, ny)];
-            const float& ω_up_left = ω[FLATTEN(i-1, j+1, nx, ny)];
-            const float& ω_up_right = ω[FLATTEN(i+1, j+1, nx, ny)];  
-            const float d2dξ2 = (ω_right - 2*ω_center + ω_left) * inv_dξ_squared;
-            const float d2dη2 = (ω_up - 2*ω_center + ω_down) * inv_dη_squared;
-            const float d2dξdη = (ω_up_right - ω_up_left - ω_down_right + ω_down_left) * 0.25f * inv_dξdη;
-            const float laplacian = d2dξ2*(ξx*ξx + ξy*ξy) + d2dη2*(ηx*ηx + ηy*ηy) + 2 * d2dξdη * (ξx*ηx + ξy*ηy);
+        for(int i=1; i < nx-1; i++) {
+            for(int j=1; j < ny-1; j++) {
+                const int idx = FLATTEN(i, j, nx, ny);
+                const float& ω_center = ω[idx];
+                const float& ω_left =  ω[FLATTEN(i-1, j, nx, ny)];
+                const float& ω_right = ω[FLATTEN(i+1, j, nx, ny)];
+                const float& ω_down = ω[FLATTEN(i, j-1, nx, ny)];
+                const float& ω_up =  ω[FLATTEN(i, j+1, nx, ny)];
+                const float& ω_down_left = ω[FLATTEN(i-1, j-1, nx, ny)];
+                const float& ω_down_right = ω[FLATTEN(i+1, j-1, nx, ny)];
+                const float& ω_up_left = ω[FLATTEN(i-1, j+1, nx, ny)];
+                const float& ω_up_right = ω[FLATTEN(i+1, j+1, nx, ny)];  
+                const float d2dξ2 = (ω_right - 2*ω_center + ω_left) * inv_dξ_squared;
+                const float d2dη2 = (ω_up - 2*ω_center + ω_down) * inv_dη_squared;
+                const float d2dξdη = (ω_up_right - ω_up_left - ω_down_right + ω_down_left) * 0.25f * inv_dξdη;
+                const float laplacian = d2dξ2*(ξx*ξx + ξy*ξy) + d2dη2*(ηx*ηx + ηy*ηy) + 2 * d2dξdη * (ξx*ηx + ξy*ηy);
 
-            ω_new[idx] = ω[idx] + nu * laplacian * dt;
+                ω_new[idx] = ω[idx] + nu * laplacian * dt;
+            }
         }
-    }
     const float one_one_sixths = 1.0f / 6.0f;
     #pragma omp parallel for collapse(2) if(g_enable_solver_parallelization)
-    for(int i=0; i < nx; i++) {
-        for(int j=0; j < ny; j++) {
-            const int idx = FLATTEN(i, j, nx, ny);
-            const float px = x[2*idx];
-            const float py = x[2*idx + 1];
-            float u_x1, u_y1;
-            find_velocity_at_point(u_x1, u_y1, px, py, u, u0, nx, ny, dims);
-            float k1_x = -u_x1;
-            float k1_y = -u_y1;
-            float mid_px = px + 0.5f * dt * k1_x;
-            float mid_py = py + 0.5f * dt * k1_y;
-            float u_x2, u_y2;
-            find_velocity_at_point(u_x2, u_y2, mid_px, mid_py, u, u0, nx, ny, dims);
-            float k2_x = -u_x2;
-            float k2_y = -u_y2;
-            mid_px = px + 0.5f * dt * k2_x;
-            mid_py = py + 0.5f * dt * k2_y; 
-            float u_x3, u_y3;
-            find_velocity_at_point(u_x3, u_y3, mid_px, mid_py, u, u0, nx, ny, dims);
-            float k3_x = -u_x3;
-            float k3_y = -u_y3;
-            float end_px = px + dt * k3_x;
-            float end_py = py + dt * k3_y;
-            float u_x4, u_y4;
-            find_velocity_at_point(u_x4, u_y4, end_px, end_py, u, u0, nx, ny, dims);
-            float k4_x = -  u_x4;
-            float k4_y = -  u_y4;
-            float back_px = px + (dt * one_one_sixths) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
-            float back_py = py + (dt * one_one_sixths) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
+        for(int i=0; i < nx; i++) {
+            for(int j=0; j < ny; j++) {
+                const int idx = FLATTEN(i, j, nx, ny);
+                const float px = x[2*idx];
+                const float py = x[2*idx + 1];
+                float u_x1, u_y1;
+                find_velocity_at_point(u_x1, u_y1, px, py, u, u0, nx, ny, dims);
+                float k1_x = -u_x1;
+                float k1_y = -u_y1;
+                float mid_px = px + 0.5f * dt * k1_x;
+                float mid_py = py + 0.5f * dt * k1_y;
+                float u_x2, u_y2;
+                find_velocity_at_point(u_x2, u_y2, mid_px, mid_py, u, u0, nx, ny, dims);
+                float k2_x = -u_x2;
+                float k2_y = -u_y2;
+                mid_px = px + 0.5f * dt * k2_x;
+                mid_py = py + 0.5f * dt * k2_y; 
+                float u_x3, u_y3;
+                find_velocity_at_point(u_x3, u_y3, mid_px, mid_py, u, u0, nx, ny, dims);
+                float k3_x = -u_x3;
+                float k3_y = -u_y3;
+                float end_px = px + dt * k3_x;
+                float end_py = py + dt * k3_y;
+                float u_x4, u_y4;
+                find_velocity_at_point(u_x4, u_y4, end_px, end_py, u, u0, nx, ny, dims);
+                float k4_x = -  u_x4;
+                float k4_y = -  u_y4;
+                float back_px = px + (dt * one_one_sixths) * (k1_x + 2*k2_x + 2*k3_x + k4_x);
+                float back_py = py + (dt * one_one_sixths) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
 
-            float ω_back;
-            find_vorticity_at_point(ω_back, back_px, back_py, ω, nx, ny, dims);
-            ω_new[idx] += ω_back- ω[idx];
+                float ω_back;
+                find_vorticity_at_point(ω_back, back_px, back_py, ω, nx, ny, dims);
+                ω_new[idx] += ω_back- ω[idx];
+            }
         }
-    }
     std::copy(ω_new, ω_new + (nx * ny), ω);
     delete[] ω_new;
 
@@ -236,8 +239,8 @@ void solve_stream_function_update(float* ψ, const float* ω, const int nx, cons
     // const float inv_dy_squared = 1.0f / (dy * dy);
     const float dξ = 1.0f/nx;
     const float dη = 1.0f/ny;
-    const float inv_dξ_squared = 1.0f / (dξ * dξ);
-    const float inv_dη_squared = 1.0f / (dη * dη);
+    const float inv_dξ_squared = 1.0f / square(dξ);
+    const float inv_dη_squared = 1.0f / square(dη);
     const float inv_dξdη = 1.0f / (dξ * dη);
     const float a = dims[0];
     const float b = dims[1];
@@ -393,7 +396,7 @@ void solve_boundary_vorticity_values(float* ω, const float u0, const float* ψ,
     const float a3 = (ηx*ηx + ηy*ηy)/(dη*dη);
     const float yη = std::sinf(θ) * b;
     const float t1 = 1/((yη*dη)*(yη*dη));
-    const float t2 = 1/((a*std::sin(θ)*dξ)*(a*std::sin(θ)*dξ));
+    const float t2 = 1/(square(a*std::sin(θ)*dξ));
     // const float t2 = 1/(yη*dη);
     for(int i=0; i < nx; i++) {
         const bool is_valid_horiz_walls  = (ψ[i] == 0.0f) && (ψ[(ny-1)*nx + i] == 0.0f);
@@ -418,7 +421,7 @@ void solve_boundary_vorticity_values(float* ω, const float u0, const float* ψ,
         // const float d2ψdξdη_right = -(ψ[FLATTEN(nx-2, j+1, nx, ny)] - ψ[FLATTEN(nx-2, j-1, nx, ny)])/(4*dξ*dη);
         // ω[FLATTEN(nx-1, j, nx, ny)] = -2*(a1*ψ[FLATTEN(nx-2, j, nx, ny)]+ a2*(-(ψ[FLATTEN(nx-2, j+1, nx, ny)] - ψ[FLATTEN(nx-2, j-1, nx, ny)])));
         // ω[FLATTEN(nx-1, j, nx, ny)*2] = -2*(t1*ψ[FLATTEN(nx-2, j, nx, ny)]); //WTF? Why did I put a 2 there?!
-        ω[FLATTEN(nx-1, j, nx, ny)] = -2*(t1*ψ[FLATTEN(nx-2, j, nx, ny)]); 
+        ω[FLATTEN(nx-1, j, nx, ny)] = -2*(t2*ψ[FLATTEN(nx-2, j, nx, ny)]); 
     }
 
     for(int i=1; i < nx-1; i++) {

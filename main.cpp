@@ -1,6 +1,9 @@
 #include<iostream>
 #include<cmath>
 #include<vector>
+#include<string>
+#include<cstdlib>
+#include<filesystem>
 #include<random>
 #include<SFML/Graphics.hpp>
 #include "aux.hpp"
@@ -26,7 +29,7 @@ const int SCREEN_END_Y_PADDING = SCREEN_END_Y_PADDING_default;
 int main() {
     const float a = 1.0f;
     const float b = 1.0f;
-    const float θ = M_PI/2.0f;
+    const float θ = M_PI/3.0f;
 
     // const int NX = 100;
     // const int NY = 100;
@@ -71,9 +74,9 @@ int main() {
     bool has_selected_point = false;
     int stream_solver_iter_exponent = 4;
     float stream_solver_tolerance_exponent = -4.0f;
-    bool enable_solver_parallelization = false;
-    int solver_max_threads = 4;
-    int iterations_per_render = 1;
+    bool enable_solver_parallelization = true;
+    int solver_max_threads = 19;
+    int iterations_per_render = 100;
     float stream_convergence_tolerance = 1e-5f;
     float stream_max_residual = 0.0f;
     bool stream_is_converged = false;
@@ -107,6 +110,29 @@ int main() {
         }
 
         return positions;
+    };
+
+    auto set_reynolds_number = [&](const float new_reynolds_number) {
+        reynolds_number = std::max(1.0f, new_reynolds_number);
+        nu = u0 * std::sqrt(a * b) / reynolds_number;
+    };
+
+    auto reset_simulation = [&]() {
+        setup_inital_state(ψ, ω, x, u, NX, NY, dims, u0);
+        compute_physics_centroid(x, NX, NY, physics_centroid);
+        stream_is_converged = check_stream_function_convergence(ψ, ω, NX, NY, dims, stream_convergence_tolerance, stream_max_residual);
+        has_selected_point = false;
+        has_clicked_streamline = false;
+        clicked_streamline.clear();
+        cached_streamlines.clear();
+        iter = 0;
+        is_running = false;
+        selected_world_x = 0.0f;
+        selected_world_y = 0.0f;
+        selected_u_x = 0.0f;
+        selected_u_y = 0.0f;
+        selected_omega = 0.0f;
+        streamline_seed = 1337u;
     };
 
 
@@ -171,6 +197,21 @@ int main() {
             ImGui::Checkbox("Apply Viscosity", &enable_apply_viscosity);
             ImGui::Checkbox("Advect Vorticity", &enable_advect_vorticity);
         }
+        if(ImGui::Button("Re = 100")) {
+            set_reynolds_number(100.0f);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Re = 200")) {
+            set_reynolds_number(200.0f);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Re = 500")) {
+            set_reynolds_number(500.0f);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Re = 1000")) {
+            set_reynolds_number(1000.0f);
+        }
         const bool reynolds_changed = ImGui::SliderFloat("Reynolds Number", &reynolds_number, 1.0f, 10000.0f, "%.2f");
         if(reynolds_changed) {
             nu = u0 * std::sqrt(a * b) / std::max(1.0f, reynolds_number);
@@ -179,6 +220,9 @@ int main() {
         if(ImGui::IsItemEdited()) {
             reynolds_number = u0 * std::sqrt(a * b) / std::max(1e-6f, nu);
         }
+        if(ImGui::Button("Reset Simulation")) {
+            reset_simulation();
+        }
         ImGui::Separator();
         ImGui::Text("Stream Function Solver");
         ImGui::SliderFloat("Domain Magnification", &render_magnification, 0.1f, 10.0f, "%.3f");
@@ -186,7 +230,11 @@ int main() {
         ImGui::SliderFloat("Centroid Screen Y", &render_center[1], 0.0f, static_cast<float>(window.getSize().y), "%.1f");
         scaling[0] = base_scaling[0] * render_magnification;
         scaling[1] = base_scaling[1] * render_magnification;
-        ImGui::Checkbox("Enable Parallelization", &enable_solver_parallelization);
+        if(ImGui::Checkbox("Enable Parallelization", &enable_solver_parallelization)) {
+            if(enable_solver_parallelization && solver_max_threads < 19) {
+                solver_max_threads = 19;
+            }
+        }
         if(enable_solver_parallelization) {
             ImGui::SliderInt("Max Threads", &solver_max_threads, 1, 64);
         }
@@ -236,6 +284,25 @@ int main() {
             ImGui::Text("vorticity: %.5f", selected_omega);
         } else {
             ImGui::Text("Click inside the fluid domain to sample.");
+        }
+        ImGui::Separator();
+        if(ImGui::Button("Export Centerlines & Plot")) {
+            const char* outfname = "plotting_values.txt";
+            const bool ok = export_velocity_centerlines(x, u, NX, NY, dims, outfname);
+            if(ok) {
+                // ensure images directory exists for future saved plots
+                try {
+                    std::filesystem::create_directories("images");
+                } catch(...) {
+                }
+
+                // For now, display interactively instead of saving
+                std::string cmd = std::string("python3 plot_velocity_centerlines.py ") + outfname;
+                const int rc = std::system(cmd.c_str());
+                (void)rc;
+            } else {
+                std::cerr << "export_velocity_centerlines failed\n";
+            }
         }
         ImGui::End();
 

@@ -5,6 +5,8 @@
 #include <vector>
 #include "constants.hpp"
 #include "aux.hpp"
+#include <fstream>
+#include <iomanip>
 
 void draw_arrow(const float px, const float py, const float dPx, const float dPy, sf::RenderWindow& window, const int thickness = 2, const float head_fraction = 0.2f, sf::Color colour = sf::Color::Red);
 void obtain_streamline_path(const float* x, const float* u, const float u0, const int nx, const int ny, const float posx, const float posy, float* pos_history, const int history_length, const float dt, const float* dims);
@@ -184,6 +186,63 @@ void render_random_streamlines(const float* x, const float* u, const float u0, c
 
         render_streamline_path(positions, centroid, render_center, scaling, window, colour);
     }
+}
+
+bool export_velocity_centerlines(const float* x, const float* u, int nx, int ny, const float* dims, const char* filename) {
+    if(!x || !u || nx <= 0 || ny <= 0 || !filename || !dims) return false;
+
+    const float a = dims[0];
+    const float b = dims[1];
+    const float theta = dims[2];
+
+    const int mid_i = nx / 2;
+    const int mid_j = ny / 2;
+
+    std::ofstream ofs(filename);
+    if(!ofs) return false;
+    ofs << std::setprecision(8);
+
+    ofs << "# Velocity centerlines export\n";
+    ofs << "# nx " << nx << " ny " << ny << " mid_i " << mid_i << " mid_j " << mid_j << "\n";
+    ofs << "# dims a b theta " << a << ' ' << b << ' ' << theta << "\n";
+
+    ofs << "# U_CENTER xi eta u_xi u_eta\n";
+    for(int j = 0; j < ny; ++j) {
+        const int idx = j * nx + mid_i;
+        const float x_pos = x[2 * idx];
+        const float y_pos = x[2 * idx + 1];
+        const float world_ux = u[2 * idx];
+        const float world_uy = u[2 * idx + 1];
+
+        const float xi = (x_pos - y_pos / std::tan(theta)) / a;
+        const float eta = y_pos / (b * std::sin(theta));
+
+        const float u_eta = world_uy / (b * std::sin(theta));
+        const float u_xi = (world_ux - world_uy / std::tan(theta)) / a;
+
+        ofs << xi << ' ' << eta << ' ' << u_xi << ' ' << u_eta << '\n';
+    }
+
+    // V_CENTER: write xi eta u_xi u_eta (eta fixed y_center, varying xi)
+    ofs << "# V_CENTER xi eta u_xi u_eta\n";
+    for(int i = 0; i < nx; ++i) {
+        const int idx = mid_j * nx + i;
+        const float x_pos = x[2 * idx];
+        const float y_pos = x[2 * idx + 1];
+        const float world_ux = u[2 * idx];
+        const float world_uy = u[2 * idx + 1];
+
+        const float xi = (x_pos - y_pos / std::tan(theta)) / a;
+        const float eta = y_pos / (b * std::sin(theta));
+
+        const float u_eta = world_uy / (b * std::sin(theta));
+        const float u_xi = (world_ux - world_uy / std::tan(theta)) / a;
+
+        ofs << xi << ' ' << eta << ' ' << u_xi << ' ' << u_eta << '\n';
+    }
+
+    ofs.close();
+    return true;
 }
 
 
