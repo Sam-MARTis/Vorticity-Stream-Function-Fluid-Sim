@@ -77,6 +77,14 @@ int main() {
     bool enable_solver_parallelization = true;
     int solver_max_threads = 19;
     int iterations_per_render = 100;
+    int plot_property_index = 0;
+    int plot_num_levels = 20;
+    int plot_contour_lines = 10;
+    bool plot_enable_contour_areas = true;
+    bool plot_enable_contour_lines = true;
+    float plot_linewidth = 0.5f;
+    float plot_alpha = 0.3f;
+    bool plot_save_images = false;
     float stream_convergence_tolerance = 1e-5f;
     float stream_max_residual = 0.0f;
     bool stream_is_converged = false;
@@ -286,6 +294,12 @@ int main() {
             ImGui::Text("Click inside the fluid domain to sample.");
         }
         ImGui::Separator();
+        ImGui::Text("Plot Options");
+        ImGui::SliderFloat("Line Width", &plot_linewidth, 0.1f, 3.0f);
+        ImGui::SliderFloat("Line Alpha", &plot_alpha, 0.0f, 1.0f);
+        ImGui::Checkbox("Save Images to Images/", &plot_save_images);
+        ImGui::Separator();
+        const char* plot_properties[] = {"vorticity", "psi", "u", "v"};
         if(ImGui::Button("Export Centerlines & Plot")) {
             const char* outfname = "plotting_values.txt";
             const bool ok = export_velocity_centerlines(x, u, NX, NY, dims, outfname);
@@ -296,12 +310,52 @@ int main() {
                 } catch(...) {
                 }
 
-                // For now, display interactively instead of saving
-                std::string cmd = std::string("python3 plot_velocity_centerlines.py ") + outfname;
+                std::string cmd = std::string("python3 plot_velocity_centerlines.py ") + outfname +
+                    " --linewidth " + std::to_string(plot_linewidth) +
+                    " --alpha " + std::to_string(plot_alpha) +
+                    " --save-images " + (plot_save_images ? "1" : "0") +
+                    " --re " + std::to_string(reynolds_number) +
+                    " --nx " + std::to_string(NX) +
+                    " --ny " + std::to_string(NY) +
+                    " --u0 " + std::to_string(u0);
                 const int rc = std::system(cmd.c_str());
                 (void)rc;
             } else {
                 std::cerr << "export_velocity_centerlines failed\n";
+            }
+        }
+        ImGui::Separator();
+        ImGui::Text("State Plotting");
+        ImGui::Combo("Property", &plot_property_index, plot_properties, IM_ARRAYSIZE(plot_properties));
+        ImGui::SliderInt("Contour Levels", &plot_num_levels, 5, 100);
+        ImGui::SliderInt("Contour Lines", &plot_contour_lines, 2, 100);
+        ImGui::Checkbox("Plot Contour Areas", &plot_enable_contour_areas);
+        ImGui::Checkbox("Plot Contour Lines", &plot_enable_contour_lines);
+        if(ImGui::Button("Plot State")) {
+            const char* outfname = "state_cache.txt";
+            const bool ok = export_state_cache(x, ω, ψ, u, NX, NY, dims, outfname);
+            if(ok) {
+                try {
+                    std::filesystem::create_directories("cache");
+                } catch(...) {
+                }
+                const std::string prop_name = plot_properties[plot_property_index];
+                std::string cmd = std::string("python3 plot_state_cache.py ") + outfname + " " + prop_name + 
+                    " --levels " + std::to_string(plot_num_levels) +
+                    " --lines " + std::to_string(plot_contour_lines) +
+                    " --areas " + (plot_enable_contour_areas ? "1" : "0") +
+                    " --plot-lines " + (plot_enable_contour_lines ? "1" : "0") +
+                    " --linewidth " + std::to_string(plot_linewidth) +
+                    " --alpha " + std::to_string(plot_alpha) +
+                    " --save-images " + (plot_save_images ? "1" : "0") +
+                    " --re " + std::to_string(reynolds_number) +
+                    " --nx " + std::to_string(NX) +
+                    " --ny " + std::to_string(NY) +
+                    " --u0 " + std::to_string(u0);
+                const int rc = std::system(cmd.c_str());
+                (void)rc;
+            } else {
+                std::cerr << "export_state_cache failed\n";
             }
         }
         ImGui::End();

@@ -17,3 +17,6 @@ Once done, run the sim binary
 ```
 
 Check images in the `images` folder
+
+## How it works
+

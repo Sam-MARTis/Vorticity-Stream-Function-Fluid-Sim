@@ -245,5 +245,38 @@ bool export_velocity_centerlines(const float* x, const float* u, int nx, int ny,
     return true;
 }
 
+bool export_state_cache(const float* x, const float* omega, const float* psi, const float* u, int nx, int ny, const float* dims, const char* filename) {
+    if(!x || !omega || !psi || !u || nx <= 0 || ny <= 0 || !filename || !dims) return false;
 
+    const float a = dims[0];
+    const float b = dims[1];
+    const float theta = dims[2];
 
+    std::ofstream ofs(filename);
+    if(!ofs) return false;
+    ofs << std::setprecision(8);
+
+    ofs << "# NX " << nx << " NY " << ny << "\n";
+    ofs << "# dims a b theta " << a << ' ' << b << ' ' << theta << "\n";
+    ofs << "# xi eta x y vorticity psi u_x u_y\n";
+
+    for(int j = 0; j < ny; ++j) {
+        for(int i = 0; i < nx; ++i) {
+            const int idx = j * nx + i;
+            const float x_pos = x[2 * idx];
+            const float y_pos = x[2 * idx + 1];
+            const float w = omega[idx];
+            const float p = psi[idx];
+            const float ux = u[2 * idx];
+            const float uy = u[2 * idx + 1];
+
+            const float xi = (x_pos - y_pos / std::tan(theta)) / a;
+            const float eta = y_pos / (b * std::sin(theta));
+
+            ofs << xi << ' ' << eta << ' ' << x_pos << ' ' << y_pos << ' ' << w << ' ' << p << ' ' << ux << ' ' << uy << '\n';
+        }
+    }
+
+    ofs.close();
+    return true;
+}
