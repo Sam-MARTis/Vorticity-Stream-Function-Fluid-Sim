@@ -246,7 +246,7 @@ int main() {
         if(enable_solver_parallelization) {
             ImGui::SliderInt("Max Threads", &solver_max_threads, 1, 64);
         }
-        ImGui::SliderInt("Iterations Per Render", &iterations_per_render, 1, 100);
+        ImGui::SliderInt("Iterations Per Render", &iterations_per_render, 1, 500);
         ImGui::SliderInt("Iterations Exponent", &stream_solver_iter_exponent, 2, 7);
         ImGui::SliderFloat("Tolerance Exponent", &stream_solver_tolerance_exponent, -10.0f, -2.0f, "%.1f");
         const int stream_solver_max_iterations = static_cast<int>(std::pow(10.0f, stream_solver_iter_exponent));
