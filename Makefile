@@ -27,7 +27,12 @@ ifeq ($(strip $(SFML_LIBS)),)
 endif
 
 CXXFLAGS ?= -std=c++20 -O2 -Wall -Wextra
-OMPFLAGS ?= -fopenmp
+ENABLE_OPENMP ?= 1
+ifeq ($(ENABLE_OPENMP),1)
+	OMPFLAGS := -fopenmp
+else
+	OMPFLAGS :=
+endif
 CPPFLAGS += -I. -Iimgui -Iimgui-sfml -DIMGUI_USER_CONFIG='"imconfig-SFML.h"' $(SFML_CFLAGS)
 LDFLAGS += $(SFML_LIBS) -lGL $(OMPFLAGS)
 CXXFLAGS += $(OMPFLAGS)
@@ -49,13 +54,17 @@ $(OBJDIR)/%.o: %.cpp
 run: build
 	./$(BINDIR)/$(TARGET)
 
+help:
+	@echo "Available targets:"
+	@echo "  make build                 - Build the project (default)"
+	@echo "  make run                   - Build and run the simulation"
+	@echo "  make clean                 - Clean build artifacts"
+	@echo ""
+	@echo "Build options:"
+	@echo "  make ENABLE_OPENMP=0       - Build without OpenMP (compatible with systems without OpenMP)"
+	@echo "  make ENABLE_OPENMP=1       - Build with OpenMP enabled (default, faster on multi-core)"
+
 clean:
 	rm -rf build $(BINDIR)
-
-help:
-	@echo "Targets:"
-	@echo "  make build   - Compile the project"
-	@echo "  make run     - Compile and run the project"
-	@echo "  make clean   - Remove build artifacts"
 
 -include $(DEP)

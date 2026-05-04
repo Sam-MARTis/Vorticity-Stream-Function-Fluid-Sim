@@ -6,7 +6,9 @@ void setup_inital_state(float* ψ, float* ω, float* x, float* u, const int nx, 
     const float θ = dims[2];
     const float dξ = 1.0f/nx;
     const float dη = 1.0f/ny;
+#ifdef _OPENMP
     #pragma omp parallel for
+#endif
     for (int i = 0; i < nx * ny; i++) {
         ψ[i] = 0.0f;
         ω[i] = 0.0f;

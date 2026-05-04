@@ -74,7 +74,11 @@ int main() {
     bool has_selected_point = false;
     int stream_solver_iter_exponent = 4;
     float stream_solver_tolerance_exponent = -4.0f;
+#ifdef _OPENMP
     bool enable_solver_parallelization = true;
+#else
+    bool enable_solver_parallelization = false;
+#endif
     int solver_max_threads = 19;
     int iterations_per_render = 100;
     int plot_property_index = 0;
@@ -238,6 +242,7 @@ int main() {
         ImGui::SliderFloat("Centroid Screen Y", &render_center[1], 0.0f, static_cast<float>(window.getSize().y), "%.1f");
         scaling[0] = base_scaling[0] * render_magnification;
         scaling[1] = base_scaling[1] * render_magnification;
+#ifdef _OPENMP
         if(ImGui::Checkbox("Enable Parallelization", &enable_solver_parallelization)) {
             if(enable_solver_parallelization && solver_max_threads < 19) {
                 solver_max_threads = 19;
@@ -246,6 +251,9 @@ int main() {
         if(enable_solver_parallelization) {
             ImGui::SliderInt("Max Threads", &solver_max_threads, 1, 64);
         }
+#else
+        ImGui::TextDisabled("Parallelization (OpenMP not available)");
+#endif
         ImGui::SliderInt("Iterations Per Render", &iterations_per_render, 1, 500);
         ImGui::SliderInt("Iterations Exponent", &stream_solver_iter_exponent, 2, 7);
         ImGui::SliderFloat("Tolerance Exponent", &stream_solver_tolerance_exponent, -10.0f, -2.0f, "%.1f");
