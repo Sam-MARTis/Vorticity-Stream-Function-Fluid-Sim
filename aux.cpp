@@ -4,7 +4,7 @@
 #include "constants.hpp"
 
 #ifdef ENABLE_SFML_RENDERING
-#include "SFML/Graphics.hpp"
+    #include "SFML/Graphics.hpp"
 #endif
 
 void print(const std::string& message) {
