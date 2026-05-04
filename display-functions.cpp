@@ -1,4 +1,3 @@
-#include<SFML/Graphics.hpp>
 #include <algorithm>
 #include <cmath>
 #include <random>
@@ -8,9 +7,14 @@
 #include <fstream>
 #include <iomanip>
 
+#ifdef ENABLE_SFML_RENDERING
+#include<SFML/Graphics.hpp>
+
 void draw_arrow(const float px, const float py, const float dPx, const float dPy, sf::RenderWindow& window, const int thickness = 2, const float head_fraction = 0.2f, sf::Color colour = sf::Color::Red);
+#endif
 void obtain_streamline_path(const float* x, const float* u, const float u0, const int nx, const int ny, const float posx, const float posy, float* pos_history, const int history_length, const float dt, const float* dims);
 
+#ifdef ENABLE_SFML_RENDERING
 sf::Color interpolate_colour(const sf::Color low, const sf::Color high, const float t) {
     const float clamped_t = std::clamp(t, 0.0f, 1.0f);
     const auto lerp_channel = [clamped_t](const unsigned char a, const unsigned char b) {
@@ -187,6 +191,8 @@ void render_random_streamlines(const float* x, const float* u, const float u0, c
         render_streamline_path(positions, centroid, render_center, scaling, window, colour);
     }
 }
+
+#endif
 
 bool export_velocity_centerlines(const float* x, const float* u, int nx, int ny, const float* dims, const char* filename) {
     if(!x || !u || nx <= 0 || ny <= 0 || !filename || !dims) return false;

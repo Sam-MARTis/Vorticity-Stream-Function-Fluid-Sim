@@ -27,6 +27,9 @@ CPPFLAGS += -I. -Iimgui -Iimgui-sfml -DIMGUI_USER_CONFIG='"imconfig-SFML.h"' $(S
 LDFLAGS += $(SFML_LIBS) -lGL $(OMPFLAGS)
 CXXFLAGS += $(OMPFLAGS)
 
+GUI_CPPFLAGS := $(CPPFLAGS) -DENABLE_SFML_RENDERING
+CLI_CPPFLAGS := $(CPPFLAGS)
+
 .PHONY: all build run clean help
 
 all: build
@@ -41,9 +44,13 @@ $(BINDIR)/$(TARGET): $(OBJ)
 # Headless CLI solver target (no runtime rendering)
 CLI_TARGET := fluid_sim_cli
 
-$(BINDIR)/$(CLI_TARGET): $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions.o
+$(BINDIR)/$(CLI_TARGET): $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions-cli.o
 	@mkdir -p $(BINDIR)
-	$(CXX) $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions.o -o $@ $(LDFLAGS)
+	$(CXX) $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions-cli.o -o $@ $(LDFLAGS)
+
+$(OBJDIR)/display-functions-cli.o: display-functions.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CLI_CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
 .PHONY: cli
 cli: $(BINDIR)/$(CLI_TARGET)
@@ -51,7 +58,7 @@ cli: $(BINDIR)/$(CLI_TARGET)
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
+	$(CXX) $(GUI_CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
 run: build
 	./$(BINDIR)/$(TARGET)
