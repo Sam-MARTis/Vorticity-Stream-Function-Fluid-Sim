@@ -24,12 +24,14 @@ ifeq ($(ENABLE_OPENMP),1)
 else
 	OMPFLAGS :=
 endif
-CPPFLAGS += -I. -Iimgui -Iimgui-sfml -DIMGUI_USER_CONFIG='"imconfig-SFML.h"' $(SFML_CFLAGS)
-LDFLAGS += $(SFML_LIBS) -lGL $(OMPFLAGS)
+BASE_CPPFLAGS := -I. -Iimgui -Iimgui-sfml -DIMGUI_USER_CONFIG='"imconfig-SFML.h"'
+CPPFLAGS += $(BASE_CPPFLAGS)
 CXXFLAGS += $(OMPFLAGS)
 
-GUI_CPPFLAGS := $(CPPFLAGS) -DENABLE_SFML_RENDERING
+GUI_CPPFLAGS := $(CPPFLAGS) $(SFML_CFLAGS) -DENABLE_SFML_RENDERING
+GUI_LDFLAGS := $(SFML_LIBS) -lGL $(OMPFLAGS)
 CLI_CPPFLAGS := $(CPPFLAGS)
+CLI_LDFLAGS := $(OMPFLAGS)
 
 .PHONY: all build run clean help
 
@@ -39,7 +41,7 @@ build: $(BINDIR)/$(TARGET)
 
 $(BINDIR)/$(TARGET): $(OBJ)
 	@mkdir -p $(BINDIR)
-	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
+	$(CXX) $(OBJ) -o $@ $(GUI_LDFLAGS)
 
 
 # Headless CLI solver target (no runtime rendering)
@@ -49,7 +51,7 @@ CLI_OBJ := $(CLI_SRC:%.cpp=$(CLIOBJDIR)/%.o)
 
 $(BINDIR)/$(CLI_TARGET): $(CLI_OBJ)
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CLI_OBJ) -o $@ $(LDFLAGS)
+	$(CXX) $(CLI_OBJ) -o $@ $(CLI_LDFLAGS)
 
 $(CLIOBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
