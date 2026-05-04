@@ -55,7 +55,8 @@ Index of this file:
 
 #include <stdio.h>      // FILE*, sscanf
 #include <stdlib.h>     // NULL, malloc, free, qsort, atoi, atof
-#include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
+#include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf
+#include <cmath>
 #include <limits.h>     // INT_MIN, INT_MAX
 
 // Enable SSE intrinsics if available
@@ -447,7 +448,7 @@ IM_MSVC_RUNTIME_CHECKS_OFF
 #define ImSqrt(X)           sqrtf(X)
 #define ImFmod(X, Y)        fmodf((X), (Y))
 #define ImCos(X)            cosf(X)
-#define ImSin(X)            sinf(X)
+#define ImSin(X)            std::sin(X)
 #define ImAcos(X)           acosf(X)
 #define ImAtan2(Y, X)       atan2f((Y), (X))
 #define ImAtof(STR)         atof(STR)

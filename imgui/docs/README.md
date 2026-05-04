@@ -77,7 +77,7 @@ ImGui::ColorEdit4("Color", my_color);
 // Generate samples and plot them
 float samples[100];
 for (int n = 0; n < 100; n++)
-    samples[n] = sinf(n * 0.2f + ImGui::GetTime() * 1.5f);
+    samples[n] = std::sin(n * 0.2f + ImGui::GetTime() * 1.5f);
 ImGui::PlotLines("Samples", samples, 100);
 
 // Display contents in a scrolling region

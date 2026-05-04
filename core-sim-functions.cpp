@@ -43,9 +43,9 @@ void apply_viscosity(float* ω, const int nx, const int ny, const float nu, cons
     const float b = dims[1];
     const float θ = dims[2];
     const float ξx = 1.0f/a;
-    const float ξy = -1.0f/(std::tanf(θ) * a);
+    const float ξy = -1.0f/(std::tan(θ) * a);
     const float ηx = 0.0f;
-    const float ηy = 1.0f/(std::sinf(θ) * b);
+    const float ηy = 1.0f/(std::sin(θ) * b);
     float* ω_new = new float[nx * ny];
     std::copy(ω, ω + (nx * ny), ω_new);
     #pragma omp parallel for collapse(2) if(g_enable_solver_parallelization)
@@ -131,9 +131,9 @@ void transport_vorticity_combined(float* ω, const float* x, const float* u, con
     const float b = dims[1];
     const float θ = dims[2];
     const float ξx = 1.0f/a;
-    const float ξy = -1.0f/(std::tanf(θ) * a);
+    const float ξy = -1.0f/(std::tan(θ) * a);
     const float ηx = 0.0f;
-    const float ηy = 1.0f/(std::sinf(θ) * b);
+    const float ηy = 1.0f/(std::sin(θ) * b);
 
     std::copy(ω, ω + (nx * ny), ω_new);
     #pragma omp parallel for collapse(2) if(g_enable_solver_parallelization)
@@ -245,9 +245,9 @@ void solve_stream_function_update(float* ψ, const float* ω, const int nx, cons
     const float b = dims[1];
     const float θ = dims[2];
     const float ξx = 1.0f/a;
-    const float ξy = -1.0f/(std::tanf(θ) * a);
+    const float ξy = -1.0f/(std::tan(θ) * a);
     const float ηx = 0.0f;
-    const float ηy = 1.0f/(std::sinf(θ) * b);
+    const float ηy = 1.0f/(std::sin(θ) * b);
     const float β = dξ/dη;
     const float a1 = ξx*ξx + ξy*ξy;
     const float a2 = (ξx*ηx + ξy*ηy) * 0.5f * β;
@@ -304,9 +304,9 @@ bool check_stream_function_convergence(const float* ψ, const float* ω, const i
     const float b = dims[1];
     const float θ = dims[2];
     const float ξx = 1.0f / a;
-    const float ξy = -1.0f / (std::tanf(θ) * a);
+    const float ξy = -1.0f / (std::tan(θ) * a);
     const float ηx = 0.0f;
-    const float ηy = 1.0f / (std::sinf(θ) * b);
+    const float ηy = 1.0f / (std::sin(θ) * b);
     const float β = dξ / dη;
     const float a1 = ξx * ξx + ξy * ξy;
     const float a2 = (ξx * ηx + ξy * ηy) * 0.5f * β;
@@ -345,9 +345,9 @@ void solve_velocity_update(float* u, const float u0, const float* ψ, const int 
     const float b = dims[1];
     const float θ = dims[2];
     const float ξx = 1.0f/a;
-    const float ξy = -1.0f/(std::tanf(θ) * a);
+    const float ξy = -1.0f/(std::tan(θ) * a);
     const float ηx = 0.0f;
-    const float ηy = 1.0f/(std::sinf(θ) * b);
+    const float ηy = 1.0f/(std::sin(θ) * b);
     const float dξ = 1.0f/nx;
     const float dη = 1.0f/ny;
     const float t1 = ξy/(2*dξ);
@@ -385,15 +385,15 @@ void solve_boundary_vorticity_values(float* ω, const float u0, const float* ψ,
     const float b = dims[1];
     const float θ = dims[2];
     const float ξx = 1.0f/a;
-    const float ξy = -1.0f/(std::tanf(θ) * a);
+    const float ξy = -1.0f/(std::tan(θ) * a);
     const float ηx = 0.0f;
-    const float ηy = 1.0f/(std::sinf(θ) * b);
+    const float ηy = 1.0f/(std::sin(θ) * b);
     const float dξ = 1.0f/nx;
     const float dη = 1.0f/ny;
     const float a1 = (ξx*ξx + ξy*ξy)/(dξ*dξ);
     const float a2 = (ξx*ηx + ξy*ηy)/(4*dξ*dη);
     const float a3 = (ηx*ηx + ηy*ηy)/(dη*dη);
-    const float yη = std::sinf(θ) * b;
+    const float yη = std::sin(θ) * b;
     const float t1 = 1/((yη*dη)*(yη*dη));
     const float t2 = 1/(square(a*std::sin(θ)*dξ));
     // const float t2 = 1/(yη*dη);
