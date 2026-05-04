@@ -15,24 +15,24 @@ bool export_state_cache(const float* x, const float* omega, const float* psi, co
 void compute_physics_centroid(const float* x, const int nx, const int ny, float centroid[2]);
 
 int main() {
-    const int NX = 100;
-    const int NY = 100;
-    const float a = 1.0f;
-    const float b = 1.0f;
-    const float theta = static_cast<float>(M_PI/3.0);
+    const int NX = 100;  // Grid resolution x
+    const int NY = 100;  // Grid resolution y
+    const float a = 1.0f;  // Domain width
+    const float b = 1.0f;  // Domain height
+    const float theta = static_cast<float>(M_PI/3.0);  // Domain skew angle
     const float dims[3] = {a, b, theta};
 
-    float reynolds = 100.0f;
-    float dt = 5e-4f;
-    int iterations = 10000;
-    int stream_iters = 10000;
-    float stream_tolerance = 1e-4f;
-    float u0 = 1.0f;
+    float reynolds = 100.0f;  // Reynolds number
+    float dt = 5e-4f;  // Temporal step size
+    int iterations = 10000;  // Simulation iterations
+    int stream_iters = 10000;  // Stream function solver max iterations
+    float stream_tolerance = 1e-4f;  // Stream function convergence tolerance
+    float u0 = 1.0f;  // Lid velocity magnitude
 
-    float line_width = 0.915f;
-    float line_alpha = 1.0f;
-    int contour_lines = 60;
-    int contour_levels = 25;
+    float line_width = 0.915f;  // Plot line width
+    float line_alpha = 1.0f;  // Plot line alpha
+    int contour_lines = 60;  // Contour line count
+    int contour_levels = 25;  // Contour level count
 
     std::cout << "Headless Fluid Solver (CLI)\n";
     std::cout << "Press Enter to accept defaults shown in [brackets].\n";
@@ -86,7 +86,7 @@ int main() {
     std::getline(std::cin, line);
     bool save_images = (!line.empty() && (line[0] == 'y' || line[0] == 'Y'));
 
-    const float nu = u0 * std::sqrt(a * b) / reynolds;
+    const float nu = u0 * std::sqrt(a * b) / reynolds;  // Kinematic viscosity
 
     std::cout << "Allocating arrays (" << NX << "x" << NY << ")...\n";
     float* psi = new float[NX * NY];
@@ -95,7 +95,7 @@ int main() {
     float* x = new float[2 * NX * NY];
 
     std::cout << "Initializing fields...\n";
-    setup_inital_state(psi, omega, x, u, NX, NY, dims, u0);
+    setup_inital_state(psi, omega, x, u, NX, NY, dims, u0);  // Initialize vorticity, streamfunction, coordinates, velocity
 
     set_solver_parallelization(false, 1);
 
@@ -103,9 +103,9 @@ int main() {
     auto t0 = std::chrono::steady_clock::now();
     int report_interval = std::max(1, iterations / 100);
     for(int it = 0; it < iterations; ++it) {
-        solve_vorticity_transport(omega, x, u, u0, psi, NX, NY, nu, dt, dims, true, true, true);
-        solve_stream_function_update(psi, omega, NX, NY, dims, stream_iters, stream_tolerance);
-        solve_velocity_update(u, u0, psi, NX, NY, dims);
+        solve_vorticity_transport(omega, x, u, u0, psi, NX, NY, nu, dt, dims, true, true, true);  // Advect and diffuse vorticity
+        solve_stream_function_update(psi, omega, NX, NY, dims, stream_iters, stream_tolerance);  // Solve Poisson for streamfunction
+        solve_velocity_update(u, u0, psi, NX, NY, dims);  // Compute velocity from streamfunction
         if(((it+1) % report_interval) == 0 || it == iterations-1) {
             std::cout << "Iteration " << (it+1) << " / " << iterations << "\n";
         }
@@ -117,11 +117,11 @@ int main() {
     const char* state_fname = "state_cache.txt";
     const char* center_fname = "plotting_values.txt";
     std::cout << "Exporting state cache to " << state_fname << "...\n";
-    bool ok_state = export_state_cache(x, omega, psi, u, NX, NY, dims, state_fname);
+    bool ok_state = export_state_cache(x, omega, psi, u, NX, NY, dims, state_fname);  // Export all fields
     std::cout << (ok_state ? "OK\n" : "FAILED\n");
 
     std::cout << "Exporting centerlines to " << center_fname << "...\n";
-    bool ok_center = export_velocity_centerlines(x, u, NX, NY, dims, center_fname);
+    bool ok_center = export_velocity_centerlines(x, u, NX, NY, dims, center_fname);  // Export centerline velocity data
     std::cout << (ok_center ? "OK\n" : "FAILED\n");
 
     if(do_plot) {

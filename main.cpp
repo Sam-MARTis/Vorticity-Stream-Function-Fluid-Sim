@@ -15,6 +15,8 @@
 #include "imgui-SFML.h"
 
 sf::RenderWindow window;
+
+// Grid sizing
 const int NX = 100;
 const int NY = 100;
 const int SCREEN_WIDTH = SCREEN_WIDTH_default;
@@ -27,24 +29,19 @@ const int SCREEN_END_Y_PADDING = SCREEN_END_Y_PADDING_default;
 
 
 int main() {
-    const float a = 1.0f;
-    const float b = 1.0f;
-    const float θ = M_PI/3.0f;
+    const float a = 1.0f;  // Domain width
+    const float b = 1.0f;  // Domain height
+    const float θ = M_PI/3.0f;  // Domain skew angle
 
-    // const int NX = 100;
-    // const int NY = 100;
-    // const float dx = ;
-    // const float dy = 0.01f;
-
-    const float dt = 0.0001f;
-    const float u0 = 1.0f;
-    float reynolds_number = 100.0f;
-    float nu = u0 * std::sqrt(a * b) / reynolds_number;
+    const float dt = 0.0001f;  // Temporal step size
+    const float u0 = 1.0f;  // Lid velocity magnitude
+    float reynolds_number = 100.0f;  // Reynolds number
+    float nu = u0 * std::sqrt(a * b) / reynolds_number;  // Kinematic viscosity
     const float dims[3] = {a, b, θ};
-    float* ψ = new float[NX*NY];
-    float* ω = new float[NX*NY];
-    float* u = new float[2*NX*NY];
-    float* x = new float[2*NX*NY];
+    float* ψ = new float[NX*NY];  // Streamfunction
+    float* ω = new float[NX*NY];  // Vorticity
+    float* u = new float[2*NX*NY];  // Velocity field (u, v)
+    float* x = new float[2*NX*NY];  // Coordinate field
 
 
     window.create(sf::VideoMode({SCREEN_WIDTH + (SCREEN_OFFSET_X + SCREEN_END_X_PADDING), SCREEN_HEIGHT + (SCREEN_OFFSET_Y + SCREEN_END_Y_PADDING)}, 10), "Fluid Simulation");
@@ -68,15 +65,15 @@ int main() {
     float high_colour[3] = {1.0f, 0.0f, 0.0f};
     int iter = 0;
     bool is_running = false;
-    bool use_vorticity_operator_splitting = false;
-    bool enable_advect_vorticity = true;
-    bool enable_apply_viscosity = true;
+    bool use_vorticity_operator_splitting = false;  // Use split advection and diffusion
+    bool enable_advect_vorticity = true;  // Enable vorticity advection
+    bool enable_apply_viscosity = true;  // Enable viscous diffusion
     bool has_selected_point = false;
-    int stream_solver_iter_exponent = 4;
-    float stream_solver_tolerance_exponent = -4.0f;
-    bool enable_solver_parallelization = true;
+    int stream_solver_iter_exponent = 4;  // Poisson solver max iterations = 10^exp
+    float stream_solver_tolerance_exponent = -4.0f;  // Convergence tolerance = 10^exp
+    bool enable_solver_parallelization = true;  // Use OpenMP
     int solver_max_threads = 19;
-    int iterations_per_render = 100;
+    int iterations_per_render = 100;  // Solver steps between render frames
     int plot_property_index = 0;
     int plot_num_levels = 20;
     int plot_contour_lines = 10;
@@ -85,7 +82,7 @@ int main() {
     float plot_linewidth = 0.5f;
     float plot_alpha = 0.3f;
     bool plot_save_images = false;
-    float stream_convergence_tolerance = 1e-5f;
+    float stream_convergence_tolerance = 1e-5f;  // Poisson convergence check tolerance
     float stream_max_residual = 0.0f;
     bool stream_is_converged = false;
     float selected_world_x = 0.0f;
@@ -126,7 +123,7 @@ int main() {
     };
 
     auto reset_simulation = [&]() {
-        setup_inital_state(ψ, ω, x, u, NX, NY, dims, u0);
+        setup_inital_state(ψ, ω, x, u, NX, NY, dims, u0);  // Initialize vorticity and streamfunction
         compute_physics_centroid(x, NX, NY, physics_centroid);
         stream_is_converged = check_stream_function_convergence(ψ, ω, NX, NY, dims, stream_convergence_tolerance, stream_max_residual);
         has_selected_point = false;
@@ -145,7 +142,7 @@ int main() {
 
 
 
-    setup_inital_state(ψ, ω, x, u, NX, NY, dims, u0);
+    setup_inital_state(ψ, ω, x, u, NX, NY, dims, u0);  // Initialize vorticity and streamfunction
     compute_physics_centroid(x, NX, NY, physics_centroid);
     stream_is_converged = check_stream_function_convergence(ψ, ω, NX, NY, dims, stream_convergence_tolerance, stream_max_residual);
     
@@ -367,10 +364,10 @@ int main() {
             stream_convergence_tolerance = stream_solver_tolerance;
             const int solver_steps = is_running ? iterations_per_render : 1;
             for(int step = 0; step < solver_steps; step++) {
-                solve_vorticity_transport(ω, x, u, u0, ψ, NX, NY, nu, dt, dims, use_vorticity_operator_splitting, enable_apply_viscosity, enable_advect_vorticity);
-                solve_stream_function_update(ψ, ω, NX, NY, dims, stream_solver_max_iterations, stream_solver_tolerance);
+                solve_vorticity_transport(ω, x, u, u0, ψ, NX, NY, nu, dt, dims, use_vorticity_operator_splitting, enable_apply_viscosity, enable_advect_vorticity);  // Advect and diffuse vorticity
+                solve_stream_function_update(ψ, ω, NX, NY, dims, stream_solver_max_iterations, stream_solver_tolerance);  // Solve Poisson for streamfunction
                 stream_is_converged = check_stream_function_convergence(ψ, ω, NX, NY, dims, stream_convergence_tolerance, stream_max_residual);
-                solve_velocity_update(u, u0, ψ, NX, NY, dims);
+                solve_velocity_update(u, u0, ψ, NX, NY, dims);  // Compute velocity from streamfunction
                 iter++;
 
                 if(has_selected_point) {

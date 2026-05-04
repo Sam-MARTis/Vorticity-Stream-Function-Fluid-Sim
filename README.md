@@ -4,25 +4,36 @@
 
 
 ## How to run
-To run, first compile with make
+
+### GUI Version (Interactive with visualization)
+Compile with make:
 
 ```bash
 make
+make -j18  # recommended for parallel build
 ```
 
-Reccommended that you use multiple threads cause the imgui and sfml library does put some overhead
-
-```bash
-make -j18
-```
-
-Once done, run the sim binary
+Run the simulation:
 
 ```bash
 ./bin/fluid_sim
 ```
 
-Check images in the `Images` folder
+### CLI Version (Headless solver)
+Build the CLI solver:
+
+```bash
+make cli
+```
+
+Run interactively with parameter prompts:
+
+```bash
+./bin/fluid_sim_cli
+```
+
+Default values give satisfactory result. Re of 100 and 1000 are recommended. 
+If saved, check generated plots in the `Images` folder.
 
 ## How it works
 The physics and numerical details are in the `Report.pdf` file. This readme explains the code
