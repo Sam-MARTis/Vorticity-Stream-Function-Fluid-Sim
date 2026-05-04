@@ -75,7 +75,6 @@ void apply_viscosity(float* ω, const int nx, const int ny, const float nu, cons
 
 void advect_vorticity(float* ω, const float* x, const float* u, const float u0, const int nx, const int ny, const float dt, const float* dims) {
     float* ω_new = new float[nx * ny];
-    std::cout<<"Advecting vorticity with dt: "<<dt<<std::endl;
     const float a = dims[0];
     const float one_one_sixths = 1.0f / 6.0f;
     #pragma omp parallel for collapse(2) if(g_enable_solver_parallelization)

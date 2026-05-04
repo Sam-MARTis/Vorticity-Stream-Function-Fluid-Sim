@@ -37,6 +37,18 @@ $(BINDIR)/$(TARGET): $(OBJ)
 	@mkdir -p $(BINDIR)
 	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
 
+
+# Headless CLI solver target (no runtime rendering)
+CLI_TARGET := fluid_sim_cli
+
+$(BINDIR)/$(CLI_TARGET): $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions.o
+	@mkdir -p $(BINDIR)
+	$(CXX) $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions.o -o $@ $(LDFLAGS)
+
+.PHONY: cli
+cli: $(BINDIR)/$(CLI_TARGET)
+
+
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@

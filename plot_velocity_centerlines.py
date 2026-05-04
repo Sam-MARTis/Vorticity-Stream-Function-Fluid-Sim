@@ -78,6 +78,8 @@ def plot_from_file(
 		raise RuntimeError(f"No data read from {filename}")
 
 	fig, ax = plt.subplots(figsize=(6, 6))
+	xi_center = None
+	eta_center = None
 
 	if u_arr.size:
 		xi_u = u_arr[:, 0]
@@ -113,28 +115,25 @@ def plot_from_file(
 	ax.set_xlim(cx - half, cx + half)
 	ax.set_ylim(cy - half, cy + half)
 
-	# Add secondary axes showing velocities scaled from coordinate displacements
-	# Top axis: horizontal displacement -> u velocity (if u data present)
-	if u_arr.size:
-		def _xi_to_u(x):
-			return (x - xi_center) / scale
+	if u_arr.size and xi_center is not None:
+		u_axis = ax.secondary_xaxis(
+			"top",
+			functions=(
+				lambda x: (x - xi_center) / scale,
+				lambda u_val: xi_center + u_val * scale,
+			),
+		)
+		u_axis.set_xlabel("u")
 
-		def _u_to_x(u):
-			return xi_center + u * scale
-
-		sec_x = ax.secondary_xaxis("top", functions=(_xi_to_u, _u_to_x))
-		sec_x.set_xlabel("u (velocity)")
-
-	# Right axis: vertical displacement -> v velocity (if v data present)
-	if v_arr.size:
-		def _eta_to_v(y):
-			return (y - eta_center) / scale
-
-		def _v_to_eta(vv):
-			return eta_center + vv * scale
-
-		sec_y = ax.secondary_yaxis("right", functions=(_eta_to_v, _v_to_eta))
-		sec_y.set_ylabel("v (velocity)")
+	if v_arr.size and eta_center is not None:
+		v_axis = ax.secondary_yaxis(
+			"right",
+			functions=(
+				lambda y: (y - eta_center) / scale,
+				lambda v_val: eta_center + v_val * scale,
+			),
+		)
+		v_axis.set_ylabel("v")
 
 	meta_label = metadata_text(reynolds_number, nx, ny, u0)
 	if meta_label:
