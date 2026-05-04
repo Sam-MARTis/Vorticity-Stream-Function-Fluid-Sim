@@ -4,17 +4,7 @@ TARGET := fluid_sim
 BINDIR := bin
 OBJDIR := build/obj
 
-SRC := \
-	main.cpp \
-	aux.cpp \
-	core-sim-functions.cpp \
-	display-functions.cpp \
-	initializations.cpp \
-	imgui/imgui.cpp \
-	imgui/imgui_draw.cpp \
-	imgui/imgui_tables.cpp \
-	imgui/imgui_widgets.cpp \
-	imgui-sfml/imgui-SFML.cpp
+SRC := main.cpp aux.cpp core-sim-functions.cpp display-functions.cpp initializations.cpp imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp imgui-sfml/imgui-SFML.cpp
 
 OBJ := $(SRC:%.cpp=$(OBJDIR)/%.o)
 DEP := $(OBJ:.o=.d)

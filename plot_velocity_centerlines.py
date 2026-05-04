@@ -113,7 +113,8 @@ def plot_from_file(
 	ax.set_xlim(cx - half, cx + half)
 	ax.set_ylim(cy - half, cy + half)
 
-
+	# Add secondary axes showing velocities scaled from coordinate displacements
+	# Top axis: horizontal displacement -> u velocity (if u data present)
 	if u_arr.size:
 		def _xi_to_u(x):
 			return (x - xi_center) / scale
