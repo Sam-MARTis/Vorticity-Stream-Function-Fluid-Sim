@@ -2,7 +2,10 @@
 #include <string>
 #include <cmath>
 #include "constants.hpp"
+
+#ifdef ENABLE_SFML_RENDERING
 #include "SFML/Graphics.hpp"
+#endif
 
 void print(const std::string& message) {
     std::cout << message << std::endl;
@@ -76,6 +79,7 @@ void find_vorticity_at_point(float& ω_val, const float px, const float py, cons
     ω_val = (ω_local[0] * (1-i_frac) + ω_local[3] * i_frac) * (1-j_frac) + (ω_local[1] * (1-i_frac) + ω_local[2] * i_frac) * j_frac;
 }
 
+#ifdef ENABLE_SFML_RENDERING
 bool map_screen_to_world(const sf::Vector2i& screen_point,
                          float& world_x,
                          float& world_y,
@@ -94,6 +98,7 @@ bool map_screen_to_world(const sf::Vector2i& screen_point,
 
     return p_xi >= 0.0f && p_xi <= 1.0f && p_eta >= 0.0f && p_eta <= 1.0f;
 }
+#endif
 
 void compute_physics_centroid(const float* x, const int nx, const int ny, float centroid[2]) {
     double sum_x = 0.0;

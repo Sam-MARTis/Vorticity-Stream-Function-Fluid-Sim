@@ -1,10 +1,14 @@
 #pragma once 
-#include<SFML/Graphics.hpp>
 #include <vector>
+
+#ifdef ENABLE_SFML_RENDERING
+#include<SFML/Graphics.hpp>
 
 void render_scalar_field(const float* x, const float* values, int nx, int ny, const float centroid[2], const float render_center[2], const float scaling[2], sf::Color low_colour, sf::Color high_colour, sf::RenderWindow& window);
 void render_velocities(const float* x, const float* u, int nx, int ny, float normalization_factor, int thickness, float head_fraction, bool standardize_sizes, float standardized_vector_size, int density_x, int density_y, const float centroid[2], const float render_center[2], const float scaling[2], sf::RenderWindow& window);
 void render_streamline_path(const std::vector<sf::Vector2f>& positions, const float centroid[2], const float render_center[2], const float scaling[2], sf::RenderWindow& window, sf::Color colour = sf::Color::White);
 void render_random_streamlines(const float* x, const float* u, const float u0, const int nx, const int ny, const int streamline_count, const int history_length, const float dt, const float* dims, const float centroid[2], const float render_center[2], const float scaling[2], sf::RenderWindow& window, sf::Color colour = sf::Color::White, unsigned int seed = 1337u);
+#endif
+
 bool export_velocity_centerlines(const float* x, const float* u, int nx, int ny, const float* dims, const char* filename);
 bool export_state_cache(const float* x, const float* omega, const float* psi, const float* u, int nx, int ny, const float* dims, const char* filename);
