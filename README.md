@@ -6,6 +6,7 @@
 ## How to run
 
 ### GUI Version (Interactive with visualization)
+Requires SFML + Matplotlib
 Compile with make:
 
 ```bash
@@ -20,6 +21,8 @@ Run the simulation:
 ```
 
 ### CLI Version (Headless solver)
+Requires Matplotlib
+
 Build the CLI solver:
 
 ```bash
