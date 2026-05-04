@@ -3,6 +3,7 @@ CXX := g++
 TARGET := fluid_sim
 BINDIR := bin
 OBJDIR := build/obj
+CLIOBJDIR := build/obj-cli
 
 SRC := main.cpp aux.cpp core-sim-functions.cpp display-functions.cpp initializations.cpp imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp imgui-sfml/imgui-SFML.cpp
 
@@ -43,12 +44,14 @@ $(BINDIR)/$(TARGET): $(OBJ)
 
 # Headless CLI solver target (no runtime rendering)
 CLI_TARGET := fluid_sim_cli
+CLI_SRC := cli_solver.cpp aux.cpp core-sim-functions.cpp display-functions.cpp initializations.cpp
+CLI_OBJ := $(CLI_SRC:%.cpp=$(CLIOBJDIR)/%.o)
 
-$(BINDIR)/$(CLI_TARGET): $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions-cli.o
+$(BINDIR)/$(CLI_TARGET): $(CLI_OBJ)
 	@mkdir -p $(BINDIR)
-	$(CXX) $(OBJDIR)/cli_solver.o $(OBJDIR)/core-sim-functions.o $(OBJDIR)/aux.o $(OBJDIR)/initializations.o $(OBJDIR)/display-functions-cli.o -o $@ $(LDFLAGS)
+	$(CXX) $(CLI_OBJ) -o $@ $(LDFLAGS)
 
-$(OBJDIR)/display-functions-cli.o: display-functions.cpp
+$(CLIOBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CLI_CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
